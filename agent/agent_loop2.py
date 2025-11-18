@@ -1,6 +1,7 @@
 import uuid
 import json
 import datetime
+import time
 from perception.perception import Perception
 from decision.decision import Decision
 from action.executor import run_user_code
@@ -8,7 +9,10 @@ from agent.agentSession import AgentSession, PerceptionSnapshot, Step, ToolCode
 from memory.session_log import live_update_session
 from memory.memory_search import MemorySearch
 from mcp_servers.multiMCP import MultiMCP
-
+from core.control_manager import ControlManager
+from core.human_in_loop import ask_user_for_plan
+from utils.csv_manager import CSVManager
+from utils.time_utils import get_current_datetime, calculate_elapsed_time
 
 GLOBAL_PREVIOUS_FAILURE_STEPS = 3
 
@@ -18,8 +22,30 @@ class AgentLoop:
         self.decision = Decision(decision_prompt_path, multi_mcp)
         self.multi_mcp = multi_mcp
         self.strategy = strategy
+        self.control_manager = ControlManager()
+        self.csv_manager = CSVManager()
 
-    async def run(self, query: str):
+    async def run(self, query: str, test_id: int = None, query_id: str = None):
+        """
+        Run agent loop with CSV logging and step limits.
+        
+        Args:
+            query: User query
+            test_id: Optional test ID for CSV logging
+            query_id: Optional query ID (will be generated if not provided)
+        
+        Returns:
+            AgentSession: Completed session
+        """
+        session_start_time = time.perf_counter()
+        start_datetime = get_current_datetime()
+        
+        # Generate or use provided query_id
+        if query_id is None:
+            query_id = self.csv_manager.add_query(query)
+        else:
+            self.csv_manager.add_query(query, query_id)
+        
         session = AgentSession(session_id=str(uuid.uuid4()), original_query=query)
         session_memory= []
         self.log_session_start(session, query)
@@ -39,11 +65,106 @@ class AgentLoop:
         for line in session.plan_versions[-1]["plan_text"]:
             print(f"  {line}")
 
+        # Main execution loop with step limit enforcement
         while step:
-            step_result = await self.execute_step(step, session, session_memory)
+            # Check step limit
+            current_step_index = session.get_next_step_index()
+            is_limit_reached, limit_message = self.control_manager.check_step_limit(current_step_index)
+            
+            if is_limit_reached:
+                print(f"\n{limit_message}")
+                # Trigger human-in-loop for plan modification
+                context = {
+                    "reason": limit_message,
+                    "current_plan": session.plan_versions[-1]["plan_text"] if session.plan_versions else [],
+                    "step_count": current_step_index,
+                    "max_steps": self.control_manager.get_max_steps(),
+                    "query": query
+                }
+                # Suggest continuing with conclusion or new plan
+                suggested_plan = ["Conclude with current results", "Provide final answer"]
+                new_plan = ask_user_for_plan(context, suggested_plan)
+                
+                # Create a CONCLUDE step from user plan
+                if new_plan and len(new_plan) > 0:
+                    conclude_step = Step(
+                        index=current_step_index,
+                        description=new_plan[0] if new_plan else "User-provided conclusion",
+                        type="CONCLUDE",
+                        conclusion=new_plan[0] if new_plan else "User-provided answer",
+                        status="completed"
+                    )
+                    session.add_plan_version(new_plan, [conclude_step])
+                    session.mark_complete(
+                        PerceptionSnapshot(
+                            entities=[],
+                            result_requirement="User-provided answer",
+                            original_goal_achieved=True,
+                            reasoning="Plan limit reached, user provided answer",
+                            local_goal_achieved=True,
+                            local_reasoning="User intervention",
+                            last_tooluse_summary="",
+                            solution_summary=new_plan[0] if new_plan else "User answer",
+                            confidence="0.8"
+                        ),
+                        final_answer=new_plan[0] if new_plan else "User-provided answer"
+                    )
+                break
+            
+            step_result = await self.execute_step(step, session, session_memory, query)
             if step_result is None:
                 break  # 🔐 protect against CONCLUDE/NOP cases
             step = self.evaluate_step(step_result, session, query)
+
+        # Log to CSV
+        session_end_time = time.perf_counter()
+        end_datetime = get_current_datetime()
+        elapsed_time = calculate_elapsed_time(session_start_time, session_end_time)
+        
+        # Determine result status
+        result_status = "success" if session.state.get("original_goal_achieved", False) else "failure"
+        
+        # Get plan used
+        plan_used = []
+        if session.plan_versions:
+            plan_used = session.plan_versions[-1]["plan_text"]
+        
+        # Get tool name from last step
+        tool_name = ""
+        if session.plan_versions and session.plan_versions[-1]["steps"]:
+            last_step = session.plan_versions[-1]["steps"][-1]
+            if last_step.code:
+                tool_name = last_step.code.tool_name
+        
+        # Get retry count from last step
+        retry_count = 0
+        if session.plan_versions and session.plan_versions[-1]["steps"]:
+            last_step = session.plan_versions[-1]["steps"][-1]
+            if hasattr(last_step, 'execution_result') and isinstance(last_step.execution_result, dict):
+                retry_count = last_step.execution_result.get("retry_count", 0)
+        
+        # Get error message if any
+        error_message = ""
+        if not session.state.get("original_goal_achieved", False):
+            error_message = session.state.get("reasoning_note", "Execution failed")
+        
+        # Log to CSV
+        if test_id is not None:
+            self.csv_manager.log_tool_performance(
+                test_id=test_id,
+                query_id=query_id,
+                query_text=query,
+                plan_used=plan_used,
+                result_status=result_status,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                elapsed_time=elapsed_time,
+                plan_step_count=len(plan_used),
+                tool_name=tool_name,
+                retry_count=retry_count,
+                error_message=error_message,
+                final_state=session.state
+            )
 
         return session
 
@@ -107,15 +228,25 @@ class AgentLoop:
             conclusion=decision_output.get("conclusion"),
         )
 
-    async def execute_step(self, step, session, session_memory):
+    async def execute_step(self, step, session, session_memory, query: str = ""):
         print(f"\n[Step {step.index}] {step.description}")
 
         if step.type == "CODE":
             print("-" * 50, "\n[EXECUTING CODE]\n", step.code.tool_arguments["code"])
-            executor_response = await run_user_code(step.code.tool_arguments["code"], self.multi_mcp)
+            executor_response = await run_user_code(
+                step.code.tool_arguments["code"], 
+                self.multi_mcp,
+                step_description=step.description,
+                query=query
+            )
             step.execution_result = executor_response
-            import pdb; pdb.set_trace()
-            step.status = "completed"
+            
+            # Check if tool failed and handle accordingly
+            if executor_response.get("status") != "success":
+                step.status = "failed"
+                step.error = executor_response.get("error", "Unknown error")
+            else:
+                step.status = "completed"
 
             perception_result = self.run_perception(
                 query=executor_response.get('result', 'Tool Failed'),
@@ -162,31 +293,90 @@ class AgentLoop:
             return None
 
     def evaluate_step(self, step, session, query):
-        if step.perception.original_goal_achieved:
+        if step.perception and step.perception.original_goal_achieved:
             print("\n✅ Goal achieved.")
             session.mark_complete(step.perception)
             live_update_session(session)
             return None
-        elif step.perception.local_goal_achieved:
+        elif step.perception and step.perception.local_goal_achieved:
+            # Check step limit before getting next step
+            next_index = session.get_next_step_index()
+            is_limit_reached, limit_message = self.control_manager.check_step_limit(next_index)
+            if is_limit_reached:
+                print(f"\n{limit_message}")
+                # Trigger human-in-loop
+                context = {
+                    "reason": "Step limit will be reached",
+                    "current_plan": session.plan_versions[-1]["plan_text"] if session.plan_versions else [],
+                    "step_count": next_index,
+                    "max_steps": self.control_manager.get_max_steps(),
+                    "query": query
+                }
+                suggested_plan = ["Conclude with current results"]
+                new_plan = ask_user_for_plan(context, suggested_plan)
+                if new_plan:
+                    conclude_step = Step(
+                        index=next_index,
+                        description=new_plan[0],
+                        type="CONCLUDE",
+                        conclusion=new_plan[0],
+                        status="completed"
+                    )
+                    session.add_plan_version(new_plan, [conclude_step])
+                return None
             return self.get_next_step(session, query, step)
         else:
             print("\n🔁 Step unhelpful. Replanning.")
-            decision_output = self.decision.run({
-                "plan_mode": "mid_session",
-                "planning_strategy": self.strategy,
-                "original_query": query,
-                "current_plan_version": len(session.plan_versions),
-                "current_plan": session.plan_versions[-1]["plan_text"],
-                "completed_steps": [s.to_dict() for s in session.plan_versions[-1]["steps"] if s.status == "completed"],
-                "current_step": step.to_dict()
-            })
-            step = session.add_plan_version(decision_output["plan_text"], [self.create_step(decision_output)])
+            # Check if we should trigger human-in-loop for plan failure
+            current_step_index = session.get_next_step_index()
+            is_limit_reached, limit_message = self.control_manager.check_step_limit(current_step_index)
+            
+            if is_limit_reached:
+                context = {
+                    "reason": "Plan failed and step limit reached",
+                    "current_plan": session.plan_versions[-1]["plan_text"] if session.plan_versions else [],
+                    "step_count": current_step_index,
+                    "max_steps": self.control_manager.get_max_steps(),
+                    "query": query
+                }
+                # Get suggested plan from decision
+                decision_output = self.decision.run({
+                    "plan_mode": "mid_session",
+                    "planning_strategy": self.strategy,
+                    "original_query": query,
+                    "current_plan_version": len(session.plan_versions),
+                    "current_plan": session.plan_versions[-1]["plan_text"],
+                    "completed_steps": [s.to_dict() for s in session.plan_versions[-1]["steps"] if s.status == "completed"],
+                    "current_step": step.to_dict()
+                })
+                suggested_plan = decision_output.get("plan_text", ["Conclude"])
+                new_plan = ask_user_for_plan(context, suggested_plan)
+                
+                if new_plan:
+                    step = session.add_plan_version(new_plan, [self.create_step(decision_output)])
+                    print(f"\n[Decision Plan Text: V{len(session.plan_versions)}]:")
+                    for line in session.plan_versions[-1]["plan_text"]:
+                        print(f"  {line}")
+                    return step
+                else:
+                    return None
+            else:
+                decision_output = self.decision.run({
+                    "plan_mode": "mid_session",
+                    "planning_strategy": self.strategy,
+                    "original_query": query,
+                    "current_plan_version": len(session.plan_versions),
+                    "current_plan": session.plan_versions[-1]["plan_text"],
+                    "completed_steps": [s.to_dict() for s in session.plan_versions[-1]["steps"] if s.status == "completed"],
+                    "current_step": step.to_dict()
+                })
+                step = session.add_plan_version(decision_output["plan_text"], [self.create_step(decision_output)])
 
-            print(f"\n[Decision Plan Text: V{len(session.plan_versions)}]:")
-            for line in session.plan_versions[-1]["plan_text"]:
-                print(f"  {line}")
+                print(f"\n[Decision Plan Text: V{len(session.plan_versions)}]:")
+                for line in session.plan_versions[-1]["plan_text"]:
+                    print(f"  {line}")
 
-            return step
+                return step
 
     def get_next_step(self, session, query, step):
         next_index = step.index + 1

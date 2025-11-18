@@ -6,6 +6,8 @@ import builtins
 import textwrap
 import re
 from datetime import datetime
+from core.control_manager import ControlManager
+from core.human_in_loop import ask_user_for_tool_result
 
 # ───────────────────────────────────────────────────────────────
 # CONFIG
@@ -80,58 +82,78 @@ def build_safe_globals(mcp_funcs: dict, multi_mcp=None) -> dict:
 # ───────────────────────────────────────────────────────────────
 # MAIN EXECUTOR
 # ───────────────────────────────────────────────────────────────
-async def run_user_code(code: str, multi_mcp) -> dict:
+async def run_user_code(code: str, multi_mcp, step_description: str = "", query: str = "") -> dict:
+    """
+    Execute user code with retry logic and human-in-loop on failure.
+    
+    Args:
+        code: Code to execute
+        multi_mcp: MultiMCP instance
+        step_description: Description of the step (for human-in-loop context)
+        query: Original query (for human-in-loop context)
+    
+    Returns:
+        dict: Execution result with status, result/error, retry_count
+    """
+    control_manager = ControlManager()
+    max_retries = control_manager.get_max_retries()
+    
     start_time = time.perf_counter()
     start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    retry_count = 0
+    last_error = None
+    
+    # Retry loop
+    while retry_count < max_retries:
+        try:
+            func_count = count_function_calls(code)
+            if func_count > MAX_FUNCTIONS:
+                return {
+                    "status": "error",
+                    "error": f"Too many functions ({func_count} > {MAX_FUNCTIONS})",
+                    "execution_time": start_timestamp,
+                    "total_time": str(round(time.perf_counter() - start_time, 3)),
+                    "retry_count": retry_count
+                }
 
-    try:
-        func_count = count_function_calls(code)
-        if func_count > MAX_FUNCTIONS:
-            return {
-                "status": "error",
-                "error": f"Too many functions ({func_count} > {MAX_FUNCTIONS})",
-                "execution_time": start_timestamp,
-                "total_time": str(round(time.perf_counter() - start_time, 3))
+            tool_funcs = {
+                tool.name: make_tool_proxy(tool.name, multi_mcp)
+                for tool in multi_mcp.get_all_tools()
             }
 
-        tool_funcs = {
-            tool.name: make_tool_proxy(tool.name, multi_mcp)
-            for tool in multi_mcp.get_all_tools()
-        }
+            sandbox = build_safe_globals(tool_funcs, multi_mcp)
+            local_vars = {}
 
-        sandbox = build_safe_globals(tool_funcs, multi_mcp)
-        local_vars = {}
+            cleaned_code = textwrap.dedent(code.strip())
+            tree = ast.parse(cleaned_code)
 
-        cleaned_code = textwrap.dedent(code.strip())
-        tree = ast.parse(cleaned_code)
-
-        has_return = any(isinstance(node, ast.Return) for node in tree.body)
-        has_result = any(
-            isinstance(node, ast.Assign) and any(
-                isinstance(t, ast.Name) and t.id == "result" for t in node.targets
+            has_return = any(isinstance(node, ast.Return) for node in tree.body)
+            has_result = any(
+                isinstance(node, ast.Assign) and any(
+                    isinstance(t, ast.Name) and t.id == "result" for t in node.targets
+                )
+                for node in tree.body
             )
-            for node in tree.body
-        )
-        if not has_return and has_result:
-            tree.body.append(ast.Return(value=ast.Name(id="result", ctx=ast.Load())))
+            if not has_return and has_result:
+                tree.body.append(ast.Return(value=ast.Name(id="result", ctx=ast.Load())))
 
-        tree = KeywordStripper().visit(tree) # strip "key" = "value" cases to only "value"
-        tree = AwaitTransformer(set(tool_funcs)).visit(tree)
-        ast.fix_missing_locations(tree)
+            tree = KeywordStripper().visit(tree) # strip "key" = "value" cases to only "value"
+            tree = AwaitTransformer(set(tool_funcs)).visit(tree)
+            ast.fix_missing_locations(tree)
 
-        func_def = ast.AsyncFunctionDef(
-            name="__main",
-            args=ast.arguments(posonlyargs=[], args=[], kwonlyargs=[], kw_defaults=[], defaults=[]),
-            body=tree.body,
-            decorator_list=[]
-        )
-        wrapper = ast.Module(body=[func_def], type_ignores=[])
-        ast.fix_missing_locations(wrapper)
+            func_def = ast.AsyncFunctionDef(
+                name="__main",
+                args=ast.arguments(posonlyargs=[], args=[], kwonlyargs=[], kw_defaults=[], defaults=[]),
+                body=tree.body,
+                decorator_list=[]
+            )
+            wrapper = ast.Module(body=[func_def], type_ignores=[])
+            ast.fix_missing_locations(wrapper)
 
-        compiled = compile(wrapper, filename="<user_code>", mode="exec")
-        exec(compiled, sandbox, local_vars)
+            compiled = compile(wrapper, filename="<user_code>", mode="exec")
+            exec(compiled, sandbox, local_vars)
 
-        try:
             timeout = max(3, func_count * TIMEOUT_PER_FUNCTION)  # minimum 3s even for plain returns
             returned = await asyncio.wait_for(local_vars["__main"](), timeout=timeout)
 
@@ -147,45 +169,72 @@ async def run_user_code(code: str, multi_mcp) -> dict:
                 except Exception:
                     error_msg = str(result_value)
 
-                return {
-                    "status": "error",
-                    "error": error_msg,
-                    "execution_time": start_timestamp,
-                    "total_time": str(round(time.perf_counter() - start_time, 3))
-                }
+                last_error = error_msg
+                retry_count += 1
+                if retry_count < max_retries:
+                    print(f"Tool error: {error_msg}. Retrying ({retry_count}/{max_retries})...")
+                    await asyncio.sleep(1)
+                    continue
+                else:
+                    break
 
             # Else: normal success
             return {
                 "status": "success",
                 "result": str(result_value),
                 "execution_time": start_timestamp,
-                "total_time": str(round(time.perf_counter() - start_time, 3))
+                "total_time": str(round(time.perf_counter() - start_time, 3)),
+                "retry_count": retry_count
             }
 
+        except asyncio.TimeoutError:
+            last_error = f"Execution timed out after {func_count * TIMEOUT_PER_FUNCTION} seconds"
+            retry_count += 1
+            if retry_count < max_retries:
+                print(f"Timeout occurred. Retrying ({retry_count}/{max_retries})...")
+                await asyncio.sleep(1)  # Brief delay before retry
+                continue
+            else:
+                break
 
         except Exception as e:
-            return {
-                "status": "error",
-                "error": f"{type(e).__name__}: {str(e)}",
-                "execution_time": start_timestamp,
-                "total_time": str(round(time.perf_counter() - start_time, 3))
-            }
-
-
-    except asyncio.TimeoutError:
-        return {
-            "status": "error",
-            "error": f"Execution timed out after {func_count * TIMEOUT_PER_FUNCTION} seconds",
-            "execution_time": start_timestamp,
-            "total_time": str(round(time.perf_counter() - start_time, 3))
+            last_error = f"{type(e).__name__}: {str(e)}"
+            retry_count += 1
+            if retry_count < max_retries:
+                print(f"Error occurred: {last_error}. Retrying ({retry_count}/{max_retries})...")
+                await asyncio.sleep(1)  # Brief delay before retry
+                continue
+            else:
+                break
+    
+    # All retries exhausted - trigger human-in-loop
+    if last_error:
+        print(f"\nAll {max_retries} retries exhausted. Error: {last_error}")
+        context = {
+            "tool_name": "code_executor",
+            "error_message": last_error,
+            "step_description": step_description,
+            "query": query
         }
-    except Exception as e:
+        user_result = ask_user_for_tool_result(context)
+        
         return {
-            "status": "error",
-            "error": str(e),
+            "status": "success",  # Treat user input as success
+            "result": user_result,
             "execution_time": start_timestamp,
-            "total_time": str(round(time.perf_counter() - start_time, 3))
+            "total_time": str(round(time.perf_counter() - start_time, 3)),
+            "retry_count": retry_count,
+            "human_provided": True
         }
+    
+    # Fallback error
+    return {
+        "status": "error",
+        "error": last_error or "Unknown error",
+        "execution_time": start_timestamp,
+        "total_time": str(round(time.perf_counter() - start_time, 3)),
+        "retry_count": retry_count
+    }
 
 # ───────────────────────────────────────────────────────────────
 # TOOL WRAPPER
