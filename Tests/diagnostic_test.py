@@ -110,19 +110,33 @@ def test_csv_manager():
         print("[OK] CSVManager instantiated")
         
         # Test adding a query
-        query_id = csv_mgr.add_query("Test query for diagnostic")
-        print(f"[OK] Query added with ID: {query_id[:8]}...")
+        actual_query = "Find number of BHK variants available in DLF Camelia from local sources."
+        query_name = "Test query for diagnostic"
+        query_id = csv_mgr.add_query(query_text=actual_query, query_name=query_name)
+        print(f"[OK] Query added with ID: {query_id} (Bigint)")
         
-        # Test logging performance
+        # Test logging performance with current datetime
+        from utils.time_utils import get_current_datetime
+        import time
+        
+        test_start_time = time.perf_counter()
+        test_start_datetime = get_current_datetime()
+        time.sleep(0.1)  # Simulate some processing time
+        test_end_time = time.perf_counter()
+        test_end_datetime = get_current_datetime()
+        test_elapsed = str(round(test_end_time - test_start_time, 3))
+        
         csv_mgr.log_tool_performance(
             test_id=1,
             query_id=query_id,
-            query_text="Test query for diagnostic",
+            query_name=query_name,
+            query_text=actual_query,
+            query_answer="DLF Camelia has 3BHK, 4BHK, and 5BHK variants available.",
             plan_used=["Step 1", "Step 2"],
             result_status="success",
-            start_datetime="2025-01-01 10:00:00",
-            end_datetime="2025-01-01 10:00:05",
-            elapsed_time="5.000",
+            start_datetime=test_start_datetime,
+            end_datetime=test_end_datetime,
+            elapsed_time=test_elapsed,
             plan_step_count=2,
             tool_name="test_tool",
             retry_count=0,

@@ -57,7 +57,7 @@ class MultiMCP:
                     args=[config["script"]],
                     cwd=config.get("cwd", os.getcwd())
                 )
-                print(f"→ Scanning tools from: {config['script']} in {params.cwd}")
+                print(f"-> Scanning tools from: {config['script']} in {params.cwd}")
                 async with stdio_client(params) as (read, write):
                     print("Connection established, creating session...")
                     try:
@@ -66,7 +66,7 @@ class MultiMCP:
                             await session.initialize()
                             print("[agent] MCP session initialized")
                             tools = await session.list_tools()
-                            print(f"\n→ Tools received: {[tool.name for tool in tools.tools]}")
+                            print(f"\n-> Tools received: {[tool.name for tool in tools.tools]}")
                             for tool in tools.tools:
                                 self.tool_map[tool.name] = {
                                     "config": config,
@@ -77,9 +77,9 @@ class MultiMCP:
                                     self.server_tools[server_key] = []
                                 self.server_tools[server_key].append(tool)
                     except Exception as se:
-                        print(f"❌ Session error: {se}")
+                        print(f"[ERROR] Session error: {se}")
             except Exception as e:
-                print(f"❌ Error initializing MCP server {config['script']}: {e}")
+                print(f"[ERROR] Error initializing MCP server {config['script']}: {e}")
 
     async def call_tool(self, tool_name: str, arguments: dict) -> Any:
         entry = self.tool_map.get(tool_name)

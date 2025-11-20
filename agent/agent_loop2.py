@@ -25,14 +25,15 @@ class AgentLoop:
         self.control_manager = ControlManager()
         self.csv_manager = CSVManager()
 
-    async def run(self, query: str, test_id: int = None, query_id: str = None):
+    async def run(self, query: str, test_id: int = None, query_id: int = None, query_name: str = "Test query for diagnostic"):
         """
         Run agent loop with CSV logging and step limits.
         
         Args:
-            query: User query
+            query: User query (actual query text)
             test_id: Optional test ID for CSV logging
-            query_id: Optional query ID (will be generated if not provided)
+            query_id: Optional query ID (Bigint, will be generated if not provided)
+            query_name: Query name/description (default: "Test query for diagnostic")
         
         Returns:
             AgentSession: Completed session
@@ -42,9 +43,9 @@ class AgentLoop:
         
         # Generate or use provided query_id
         if query_id is None:
-            query_id = self.csv_manager.add_query(query)
+            query_id = self.csv_manager.add_query(query_text=query, query_name=query_name)
         else:
-            self.csv_manager.add_query(query, query_id)
+            self.csv_manager.add_query(query_text=query, query_name=query_name, query_id=query_id)
         
         session = AgentSession(session_id=str(uuid.uuid4()), original_query=query)
         session_memory= []
@@ -148,12 +149,17 @@ class AgentLoop:
         if not session.state.get("original_goal_achieved", False):
             error_message = session.state.get("reasoning_note", "Execution failed")
         
+        # Get final answer
+        query_answer = session.state.get("final_answer") or session.state.get("solution_summary") or ""
+        
         # Log to CSV
         if test_id is not None:
             self.csv_manager.log_tool_performance(
                 test_id=test_id,
                 query_id=query_id,
+                query_name=query_name,
                 query_text=query,
+                query_answer=query_answer,
                 plan_used=plan_used,
                 result_status=result_status,
                 start_datetime=start_datetime,
@@ -178,9 +184,9 @@ class AgentLoop:
         searcher = MemorySearch()
         results = searcher.search_memory(query)
         if not results:
-            print("❌ No matching memory entries found.\n")
+            print("[ERROR] No matching memory entries found.\n")
         else:
-            print("\n🎯 Top Matches:\n")
+            print("\n[TOP MATCHES]:\n")
             for i, res in enumerate(results, 1):
                 print(f"[{i}] File: {res['file']}\nQuery: {res['query']}\nResult Requirement: {res['result_requirement']}\nSummary: {res['solution_summary']}\n")
         return results
@@ -199,7 +205,7 @@ class AgentLoop:
         return perception_result
 
     def handle_perception_completion(self, session, perception_result):
-        print("\n✅ Perception fully answered the query.")
+        print("\n[OK] Perception fully answered the query.")
         session.state.update({
             "original_goal_achieved": True,
             "final_answer": perception_result.get("solution_summary", "Answer ready."),
@@ -271,7 +277,7 @@ class AgentLoop:
             return step
 
         elif step.type == "CONCLUDE":
-            print(f"\n💡 Conclusion: {step.conclusion}")
+            print(f"\n[CONCLUSION] {step.conclusion}")
             step.execution_result = step.conclusion
             step.status = "completed"
 
@@ -294,7 +300,7 @@ class AgentLoop:
 
     def evaluate_step(self, step, session, query):
         if step.perception and step.perception.original_goal_achieved:
-            print("\n✅ Goal achieved.")
+            print("\n[OK] Goal achieved.")
             session.mark_complete(step.perception)
             live_update_session(session)
             return None
@@ -326,57 +332,47 @@ class AgentLoop:
                 return None
             return self.get_next_step(session, query, step)
         else:
-            print("\n🔁 Step unhelpful. Replanning.")
-            # Check if we should trigger human-in-loop for plan failure
+            print("\n[REPLAN] Step unhelpful. Plan failed. Requesting human guidance...")
+            # Always trigger human-in-loop when plan fails to show agent listens
             current_step_index = session.get_next_step_index()
             is_limit_reached, limit_message = self.control_manager.check_step_limit(current_step_index)
             
-            if is_limit_reached:
-                context = {
-                    "reason": "Plan failed and step limit reached",
-                    "current_plan": session.plan_versions[-1]["plan_text"] if session.plan_versions else [],
-                    "step_count": current_step_index,
-                    "max_steps": self.control_manager.get_max_steps(),
-                    "query": query
-                }
-                # Get suggested plan from decision
-                decision_output = self.decision.run({
-                    "plan_mode": "mid_session",
-                    "planning_strategy": self.strategy,
-                    "original_query": query,
-                    "current_plan_version": len(session.plan_versions),
-                    "current_plan": session.plan_versions[-1]["plan_text"],
-                    "completed_steps": [s.to_dict() for s in session.plan_versions[-1]["steps"] if s.status == "completed"],
-                    "current_step": step.to_dict()
-                })
-                suggested_plan = decision_output.get("plan_text", ["Conclude"])
-                new_plan = ask_user_for_plan(context, suggested_plan)
-                
-                if new_plan:
-                    step = session.add_plan_version(new_plan, [self.create_step(decision_output)])
-                    print(f"\n[Decision Plan Text: V{len(session.plan_versions)}]:")
-                    for line in session.plan_versions[-1]["plan_text"]:
-                        print(f"  {line}")
-                    return step
-                else:
-                    return None
-            else:
-                decision_output = self.decision.run({
-                    "plan_mode": "mid_session",
-                    "planning_strategy": self.strategy,
-                    "original_query": query,
-                    "current_plan_version": len(session.plan_versions),
-                    "current_plan": session.plan_versions[-1]["plan_text"],
-                    "completed_steps": [s.to_dict() for s in session.plan_versions[-1]["steps"] if s.status == "completed"],
-                    "current_step": step.to_dict()
-                })
-                step = session.add_plan_version(decision_output["plan_text"], [self.create_step(decision_output)])
-
-                print(f"\n[Decision Plan Text: V{len(session.plan_versions)}]:")
+            # Build context for human-in-loop
+            context = {
+                "reason": "Plan failed - step was unhelpful" + (f" and {limit_message}" if is_limit_reached else ""),
+                "current_plan": session.plan_versions[-1]["plan_text"] if session.plan_versions else [],
+                "step_count": current_step_index,
+                "max_steps": self.control_manager.get_max_steps(),
+                "query": query
+            }
+            
+            # Get suggested plan from decision module
+            decision_output = self.decision.run({
+                "plan_mode": "mid_session",
+                "planning_strategy": self.strategy,
+                "original_query": query,
+                "current_plan_version": len(session.plan_versions),
+                "current_plan": session.plan_versions[-1]["plan_text"],
+                "completed_steps": [s.to_dict() for s in session.plan_versions[-1]["steps"] if s.status == "completed"],
+                "current_step": step.to_dict()
+            })
+            suggested_plan = decision_output.get("plan_text", ["Conclude"])
+            
+            # Show agent is listening - trigger human-in-loop
+            print("\n[LISTENING] Agent is listening for your guidance...")
+            new_plan = ask_user_for_plan(context, suggested_plan)
+            
+            # Agent uses the plan provided by user (shows agent listens)
+            if new_plan:
+                print("\n[OK] Agent received your plan. Implementing...")
+                step = session.add_plan_version(new_plan, [self.create_step(decision_output)])
+                print(f"\n[Decision Plan Text: V{len(session.plan_versions)}] (User-guided):")
                 for line in session.plan_versions[-1]["plan_text"]:
                     print(f"  {line}")
-
                 return step
+            else:
+                print("\n[WARN] No plan provided. Agent will conclude.")
+                return None
 
     def get_next_step(self, session, query, step):
         next_index = step.index + 1
@@ -400,5 +396,5 @@ class AgentLoop:
             return step
 
         else:
-            print("\n✅ No more steps.")
+            print("\n[OK] No more steps.")
             return None

@@ -39,12 +39,12 @@ def append_session_to_store(session_obj, base_dir: str = "memory/session_logs") 
                 if existing:
                     json.loads(existing)  # verify valid JSON
         except json.JSONDecodeError:
-            print(f"⚠️ Warning: Corrupt JSON detected in {store_path}. Overwriting.")
+            print(f"[WARN] Warning: Corrupt JSON detected in {store_path}. Overwriting.")
 
     with open(store_path, "w", encoding="utf-8") as f:
         json.dump(session_data, f, indent=2)
 
-    print(f"✅ Session stored: {store_path}")
+    print(f"[OK] Session stored: {store_path}")
 
 
 def live_update_session(session_obj, base_dir: str = "memory/session_logs") -> None:
@@ -54,6 +54,6 @@ def live_update_session(session_obj, base_dir: str = "memory/session_logs") -> N
     """
     try:
         append_session_to_store(session_obj, base_dir)
-        print("📝 Session live-updated.")
+        print("[OK] Session live-updated.")
     except Exception as e:
-        print(f"❌ Failed to update session: {e}")
+        print(f"[ERROR] Failed to update session: {e}")

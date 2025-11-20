@@ -60,7 +60,7 @@ class Decision:
             try:
                 output = json.loads(json_block)
             except json.JSONDecodeError as e:
-                print("⚠️ JSON decode failed, attempting salvage via regex...")
+                print("[WARN] JSON decode failed, attempting salvage via regex...")
 
                 # Attempt to extract a 'code' block manually
                 code_match = re.search(r'code\s*:\s*"(.*?)"', json_block, re.DOTALL)

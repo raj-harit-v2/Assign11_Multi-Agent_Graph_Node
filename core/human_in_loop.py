@@ -65,10 +65,13 @@ def ask_user_for_plan(context: dict, suggested_plan: list) -> list:
     if context.get('current_plan'):
         for i, step in enumerate(context.get('current_plan', []), 1):
             print(f"  {i}. {step}")
+    else:
+        print("  (No previous plan)")
     
-    print("\nSuggested new plan:")
+    print("\n[AGENT] Agent's suggested new plan:")
     for i, step in enumerate(suggested_plan, 1):
         print(f"  {i}. {step}")
+    print("\n[LISTENING] Agent is listening for your input...")
     
     print("\nOptions:")
     print("  1. Accept suggested plan (press Enter)")

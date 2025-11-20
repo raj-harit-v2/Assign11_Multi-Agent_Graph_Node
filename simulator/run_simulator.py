@@ -97,16 +97,17 @@ async def run_simulator(num_tests: int = 100, query_source: str = "Tests/sample_
         print(f"Query: {query}")
         
         try:
-            # Run agent
-            session = await loop.run(query, test_id=test_id)
+            # Run agent with query_name
+            query_name = f"Test Query {test_id}"
+            session = await loop.run(query, test_id=test_id, query_name=query_name)
             
             # Check result
             if session.state.get("original_goal_achieved", False):
                 success_count += 1
-                print(f"\n✅ Test {test_id} SUCCESS")
+                print(f"\n[OK] Test {test_id} SUCCESS")
             else:
                 failure_count += 1
-                print(f"\n❌ Test {test_id} FAILED")
+                print(f"\n[FAIL] Test {test_id} FAILED")
             
             # Sleep after test (except last one)
             if test_id < num_tests:
@@ -120,17 +121,24 @@ async def run_simulator(num_tests: int = 100, query_source: str = "Tests/sample_
         
         except Exception as e:
             failure_count += 1
-            print(f"\n❌ Test {test_id} ERROR: {e}")
+            print(f"\n[FAIL] Test {test_id} ERROR: {e}")
             # Still log to CSV with error
-            query_id = csv_manager.add_query(query)
+            from utils.time_utils import get_current_datetime
+            error_start_datetime = get_current_datetime()
+            error_end_datetime = get_current_datetime()
+            
+            query_name = f"Test Query {test_id}"
+            query_id = csv_manager.add_query(query_text=query, query_name=query_name)
             csv_manager.log_tool_performance(
                 test_id=test_id,
                 query_id=query_id,
+                query_name=query_name,
                 query_text=query,
+                query_answer="",
                 plan_used=[],
                 result_status="error",
-                start_datetime="",
-                end_datetime="",
+                start_datetime=error_start_datetime,
+                end_datetime=error_end_datetime,
                 elapsed_time="0",
                 plan_step_count=0,
                 tool_name="",
