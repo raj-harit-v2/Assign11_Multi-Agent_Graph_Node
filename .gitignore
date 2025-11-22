@@ -14,3 +14,11 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Excel temporary files
+~$*.xlsx
+~$*.xls
+
+# Backup CSV files
+*.2csv
+*V1.csv
