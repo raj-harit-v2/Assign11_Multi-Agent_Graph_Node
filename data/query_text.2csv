@@ -1,0 +1,69 @@
+Query_Id,Query_Name,Query_Text,Create_Datetime,Update_Datetime,Active_Flag
+1,Test 1 - information,What is the chemical formula for water?,2025-11-20 18:10:04,2025-11-20 18:10:04,1
+2,Test 2 - information,Who wrote the novel '1984'?,2025-11-20 18:10:26,2025-11-20 18:10:26,1
+3,Test 3 - computation,Calculate 200 divided by 8,2025-11-20 18:10:54,2025-11-20 18:10:54,1
+4,Test 4 - mathematical,Calculate 144 / 12,2025-11-20 18:11:16,2025-11-20 18:11:16,1
+5,Test 5 - data_analysis,"Calculate the average of numbers: 5, 10, 15, 20, 25",2025-11-20 18:11:37,2025-11-20 18:11:37,1
+6,Test 6 - information,What is the capital of Japan?,2025-11-20 18:11:59,2025-11-20 18:11:59,1
+7,Test 7 - mathematical,Calculate 10 * 5,2025-11-20 18:12:20,2025-11-20 18:12:20,1
+8,Test 8 - data_analysis,"Calculate the average of numbers: 100, 200, 300, 400, 500",2025-11-20 18:12:41,2025-11-20 18:12:41,1
+9,Test 9 - mathematical,What is 81 divided by 9?,2025-11-20 18:13:04,2025-11-20 18:13:04,1
+10,Test 10 - data_analysis,Calculate the percentage: 15 out of 60,2025-11-20 18:13:25,2025-11-20 18:13:25,1
+11,Test 11 - data_analysis,Calculate the percentage: 45 out of 90,2025-11-20 18:14:03,2025-11-20 18:14:03,1
+12,Test 12 - mathematical,What is 5 to the power of 3?,2025-11-20 18:14:35,2025-11-20 18:14:35,1
+13,Test 13 - information,Who invented the telephone?,2025-11-20 18:14:57,2025-11-20 18:14:57,1
+14,Test 14 - information,What is the capital of Australia?,2025-11-20 18:15:23,2025-11-20 18:15:23,1
+15,Test 15 - data_analysis,What is the factorial of 7?,2025-11-20 18:15:44,2025-11-20 18:15:44,1
+16,Test 16 - information,Who painted the Mona Lisa?,2025-11-20 18:16:06,2025-11-20 18:16:06,1
+17,Test 17 - information,What is the smallest planet in our solar system?,2025-11-20 18:16:33,2025-11-20 18:16:33,1
+18,Test 18 - computation,What is 6 times 9?,2025-11-20 18:17:13,2025-11-20 18:17:13,1
+19,Test 19 - data_analysis,Find the sum of all prime numbers from 1 to 20,2025-11-20 18:17:55,2025-11-20 18:17:55,1
+20,Test 20 - property,List the security features in DLF Camelia.,2025-11-20 18:18:17,2025-11-20 18:18:17,1
+21,Test 21 - property,Find the parking facilities in DLF Camelia.,2025-11-20 18:19:02,2025-11-20 18:19:02,1
+22,Test 22 - property,What are the price ranges for 3BHK apartments in DLF Camelia?,2025-11-20 18:19:42,2025-11-20 18:19:42,1
+23,Test 23 - property,List the clubhouse facilities in DLF Camelia.,2025-11-20 20:02:53,2025-11-20 20:02:53,1
+24,Test 24 - computation,Calculate 180 divided by 9,2025-11-20 20:04:07,2025-11-20 20:04:07,1
+25,Test 25 - computation,What is 3 to the power of 4?,2025-11-20 20:04:29,2025-11-20 20:04:29,1
+26,Test 26 - information,Who discovered penicillin?,2025-11-20 20:04:50,2025-11-20 20:04:50,1
+27,Test 27 - computation,Calculate 1000 minus 234,2025-11-20 20:05:18,2025-11-20 20:05:18,1
+28,Test 28 - property,What are the payment plans available for DLF Camelia?,2025-11-20 20:05:40,2025-11-20 20:05:40,1
+29,Test 29 - computation,What is 9 times 7?,2025-11-20 20:25:10,2025-11-20 20:25:10,1
+30,Test 30 - property,Find the connectivity options near DLF Camelia.,2025-11-20 20:25:32,2025-11-20 20:25:32,1
+31,Test 31 - mathematical,What is 8 * 9?,2025-11-20 20:28:04,2025-11-20 20:28:04,1
+32,Test 32 - information,When did World War II end?,2025-11-20 20:28:25,2025-11-20 20:28:25,1
+33,Test 33 - information,When was the first moon landing?,2025-11-20 20:28:53,2025-11-20 20:28:53,1
+34,Test 34 - data_analysis,Calculate the percentage: 25 out of 80,2025-11-20 20:29:21,2025-11-20 20:29:21,1
+35,Test 35 - data_analysis,Find the greatest common divisor of 60 and 24,2025-11-20 20:29:43,2025-11-20 20:29:43,1
+36,Test 36 - information,What is the largest planet in our solar system?,2025-11-20 20:30:05,2025-11-20 20:30:05,1
+37,Test 37 - computation,Calculate 300 minus 89,2025-11-20 20:30:54,2025-11-20 20:30:54,1
+38,Test 38 - information,What is the chemical symbol for gold?,2025-11-20 20:31:15,2025-11-20 20:31:15,1
+39,Test 39 - computation,What is 2 to the power of 8?,2025-11-20 20:31:37,2025-11-20 20:31:37,1
+40,Test 40 - mathematical,Find the square root of 36,2025-11-20 20:31:58,2025-11-20 20:31:58,1
+41,Test 41 - property,What are the specifications for 3BHK units in DLF Camelia?,2025-11-20 20:32:26,2025-11-20 20:32:26,1
+42,Test 1 - data_analysis,Find the sum of all even numbers from 1 to 100,2025-11-20 21:50:22,2025-11-20 21:50:22,1
+43,Test 2 - information,What is the chemical formula for water?,2025-11-20 21:50:44,2025-11-20 21:50:44,1
+44,Test 3 - property,What is the total number of units in DLF Camelia?,2025-11-20 21:51:05,2025-11-20 21:51:05,1
+45,Test 4 - data_analysis,Find the greatest common divisor of 48 and 18,2025-11-20 21:51:27,2025-11-20 21:51:27,1
+46,Test 5 - data_analysis,Calculate the percentage: 25 out of 80,2025-11-20 21:51:48,2025-11-20 21:51:48,1
+47,Test 6 - property,What are the price ranges for 3BHK apartments in DLF Camelia?,2025-11-20 21:52:10,2025-11-20 21:52:10,1
+48,Test 7 - property,Find number of BHK variants available in DLF Camelia from local sources.,2025-11-20 22:24:39,2025-11-20 22:24:39,1
+49,Test 8 - information,What is the capital of France?,2025-11-20 22:27:50,2025-11-20 22:27:50,1
+50,Test 9 - data_analysis,"Calculate the average of numbers: 10, 20, 30, 40, 50",2025-11-20 22:28:11,2025-11-20 22:28:11,1
+51,Test 10 - computation,Calculate 144 divided by 12,2025-11-20 22:28:33,2025-11-20 22:28:33,1
+52,Test 1 - data_analysis,Find the sum of all even numbers from 1 to 100,2025-11-20 23:03:44,2025-11-20 23:03:44,1
+53,Test 2 - information,What is the chemical formula for water?,2025-11-20 23:04:06,2025-11-20 23:04:06,1
+54,Test 3 - property,What is the total number of units in DLF Camelia?,2025-11-20 23:04:27,2025-11-20 23:04:27,1
+55,Test 4 - data_analysis,Find the greatest common divisor of 48 and 18,2025-11-20 23:04:49,2025-11-20 23:04:49,1
+56,Test 5 - data_analysis,Calculate the percentage: 25 out of 80,2025-11-20 23:05:10,2025-11-20 23:05:10,1
+57,Test 6 - property,What are the price ranges for 3BHK apartments in DLF Camelia?,2025-11-20 23:05:32,2025-11-20 23:05:32,1
+58,Test 7 - property,Find number of BHK variants available in DLF Camelia from local sources.,2025-11-20 23:07:21,2025-11-20 23:07:21,1
+59,Test 1 - data_analysis,Find the sum of all even numbers from 1 to 100,2025-11-20 23:18:33,2025-11-20 23:18:33,1
+60,Test 2 - information,What is the chemical formula for water?,2025-11-20 23:18:56,2025-11-20 23:18:56,1
+61,Test 3 - property,What is the total number of units in DLF Camelia?,2025-11-20 23:19:18,2025-11-20 23:19:18,1
+62,Test 4 - data_analysis,Find the greatest common divisor of 48 and 18,2025-11-20 23:19:40,2025-11-20 23:19:40,1
+63,Test 5 - data_analysis,Calculate the percentage: 25 out of 80,2025-11-20 23:20:02,2025-11-20 23:20:02,1
+64,Test 6 - property,What are the price ranges for 3BHK apartments in DLF Camelia?,2025-11-20 23:20:23,2025-11-20 23:20:23,1
+65,Test 7 - property,Find number of BHK variants available in DLF Camelia from local sources.,2025-11-20 23:25:12,2025-11-20 23:25:12,1
+66,Test 8 - information,What is the capital of France?,2025-11-20 23:25:54,2025-11-20 23:25:54,1
+67,Test 9 - data_analysis,"Calculate the average of numbers: 10, 20, 30, 40, 50",2025-11-20 23:26:16,2025-11-20 23:26:16,1
+68,Test 10 - computation,Calculate 144 divided by 12,2025-11-20 23:26:39,2025-11-20 23:26:39,1

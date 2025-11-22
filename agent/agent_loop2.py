@@ -11,6 +11,7 @@ from memory.memory_search import MemorySearch
 from mcp_servers.multiMCP import MultiMCP
 from core.control_manager import ControlManager
 from core.human_in_loop import ask_user_for_plan
+from core.user_plan_storage import UserPlanStorage
 from utils.csv_manager import CSVManager
 from utils.time_utils import get_current_datetime, calculate_elapsed_time
 
@@ -82,33 +83,62 @@ class AgentLoop:
                     "max_steps": self.control_manager.get_max_steps(),
                     "query": query
                 }
-                # Suggest continuing with conclusion or new plan
-                suggested_plan = ["Conclude with current results", "Provide final answer"]
-                new_plan = ask_user_for_plan(context, suggested_plan)
+                # Check if we have a stored user plan from previous lifeline
+                stored_user_plan = UserPlanStorage.get_user_plan(session.session_id)
+                if stored_user_plan:
+                    print("\n[USING STORED PLAN] Using user-provided plan from previous lifeline...")
+                    user_plan_dict = stored_user_plan
+                    conclude_text = user_plan_dict.get('final_answer', 'User-provided answer')
+                    goal_achieved = user_plan_dict.get('original_goal_achieved', False)
+                else:
+                    # Suggest continuing with conclusion or new plan
+                    suggested_plan = ["Conclude with current results", "Provide final answer"]
+                    new_plan, user_plan_dict = ask_user_for_plan(context, suggested_plan, session.session_id)
+                    
+                    # If user provided JSON plan, use it
+                    if user_plan_dict:
+                        conclude_text = user_plan_dict.get('final_answer', new_plan[0] if new_plan else "User-provided answer")
+                        goal_achieved = user_plan_dict.get('original_goal_achieved', False)
+                    else:
+                        conclude_text = new_plan[0] if new_plan else "User-provided answer"
+                        # Check if we're concluding due to failure
+                        is_conclusion_due_to_failure = (
+                            "conclude with current results" in conclude_text.lower() or
+                            "conclude" in conclude_text.lower() and "current results" in conclude_text.lower()
+                        )
+                        goal_achieved = not is_conclusion_due_to_failure
                 
                 # Create a CONCLUDE step from user plan
-                if new_plan and len(new_plan) > 0:
+                if conclude_text:
                     conclude_step = Step(
                         index=current_step_index,
-                        description=new_plan[0] if new_plan else "User-provided conclusion",
+                        description=conclude_text,
                         type="CONCLUDE",
-                        conclusion=new_plan[0] if new_plan else "User-provided answer",
+                        conclusion=conclude_text,
                         status="completed"
                     )
-                    session.add_plan_version(new_plan, [conclude_step])
+                    plan_list = [conclude_text]
+                    session.add_plan_version(plan_list, [conclude_step])
+                    
+                    # When user provides answer, mark as FAILED (not success)
+                    # User-provided answers indicate the agent couldn't solve it
+                    if user_plan_dict or stored_user_plan:
+                        goal_achieved = False  # Always mark as failed when user provides answer
+                        print("\n[STATUS] User-provided answer detected - marking as FAILED")
+                    
                     session.mark_complete(
                         PerceptionSnapshot(
                             entities=[],
                             result_requirement="User-provided answer",
-                            original_goal_achieved=True,
-                            reasoning="Plan limit reached, user provided answer",
+                            original_goal_achieved=goal_achieved,
+                            reasoning=user_plan_dict.get('reasoning_note', 'User provided answer') if user_plan_dict else "Plan limit reached, user provided answer",
                             local_goal_achieved=True,
                             local_reasoning="User intervention",
                             last_tooluse_summary="",
-                            solution_summary=new_plan[0] if new_plan else "User answer",
-                            confidence="0.8"
+                            solution_summary=user_plan_dict.get('solution_summary', conclude_text) if user_plan_dict else conclude_text,
+                            confidence=user_plan_dict.get('confidence', '0.5') if user_plan_dict else "0.5"
                         ),
-                        final_answer=new_plan[0] if new_plan else "User-provided answer"
+                        final_answer=conclude_text
                     )
                 break
             
@@ -123,7 +153,26 @@ class AgentLoop:
         elapsed_time = calculate_elapsed_time(session_start_time, session_end_time)
         
         # Determine result status
-        result_status = "success" if session.state.get("original_goal_achieved", False) else "failure"
+        # Check if goal was actually achieved (not just concluded due to failure)
+        original_goal_achieved = session.state.get("original_goal_achieved", False)
+        final_answer = session.state.get("final_answer") or session.state.get("solution_summary") or ""
+        
+        # Check if user provided answer (stored in UserPlanStorage)
+        user_provided_answer = UserPlanStorage.has_user_plan(session.session_id)
+        
+        # If user provided answer, always mark as FAILED
+        if user_provided_answer:
+            result_status = "failure"
+            print("\n[CSV LOG] User-provided answer detected - Result_Status will be 'failure'")
+        # If final answer indicates we're concluding due to failure, mark as failure
+        elif "conclude with current results" in final_answer.lower() or \
+             ("conclude" in final_answer.lower() and "current results" in final_answer.lower()):
+            result_status = "failure"
+        # Result is success only if goal was achieved AND we're not concluding due to failure
+        elif original_goal_achieved:
+            result_status = "success"
+        else:
+            result_status = "failure"
         
         # Get plan used
         plan_used = []
@@ -152,8 +201,15 @@ class AgentLoop:
         # Get final answer
         query_answer = session.state.get("final_answer") or session.state.get("solution_summary") or ""
         
-        # Log to CSV
+        # Log to CSV (after user input, if any)
         if test_id is not None:
+            # Check if user provided plan and include it in final_state
+            user_plan = UserPlanStorage.get_user_plan(session.session_id)
+            if user_plan:
+                # Add user plan info to final_state
+                session.state["user_provided_plan"] = user_plan
+                print("\n[CSV LOG] User-provided plan included in CSV log")
+            
             self.csv_manager.log_tool_performance(
                 test_id=test_id,
                 query_id=query_id,
@@ -171,6 +227,9 @@ class AgentLoop:
                 error_message=error_message,
                 final_state=session.state
             )
+        
+        # Clean up: Remove stored user plan from memory after session finishes
+        UserPlanStorage.clear_user_plan(session.session_id)
 
         return session
 
@@ -239,11 +298,26 @@ class AgentLoop:
 
         if step.type == "CODE":
             print("-" * 50, "\n[EXECUTING CODE]\n", step.code.tool_arguments["code"])
+            
+            # Build completed_steps list from session for code execution context
+            completed_steps = []
+            if session.plan_versions:
+                for plan_version in session.plan_versions:
+                    for s in plan_version.get("steps", []):
+                        if s.status == "completed" and hasattr(s, 'execution_result'):
+                            completed_steps.append({
+                                "index": s.index,
+                                "description": s.description,
+                                "execution_result": s.execution_result if isinstance(s.execution_result, dict) else {"result": str(s.execution_result)},
+                                "status": s.status
+                            })
+            
             executor_response = await run_user_code(
                 step.code.tool_arguments["code"], 
                 self.multi_mcp,
                 step_description=step.description,
-                query=query
+                query=query,
+                completed_steps=completed_steps
             )
             step.execution_result = executor_response
             
@@ -318,17 +392,68 @@ class AgentLoop:
                     "max_steps": self.control_manager.get_max_steps(),
                     "query": query
                 }
-                suggested_plan = ["Conclude with current results"]
-                new_plan = ask_user_for_plan(context, suggested_plan)
+                # Check if we have a stored user plan from previous lifeline
+                stored_user_plan = UserPlanStorage.get_user_plan(session.session_id)
+                if stored_user_plan:
+                    print("\n[USING STORED PLAN] Using user-provided plan from previous lifeline...")
+                    user_plan_dict = stored_user_plan
+                    new_plan = [user_plan_dict.get('final_answer', 'User-provided answer')]
+                else:
+                    suggested_plan = ["Conclude with current results"]
+                    new_plan, user_plan_dict = ask_user_for_plan(context, suggested_plan, session.session_id)
                 if new_plan:
+                    conclude_text = new_plan[0]
                     conclude_step = Step(
                         index=next_index,
-                        description=new_plan[0],
+                        description=conclude_text,
                         type="CONCLUDE",
-                        conclusion=new_plan[0],
+                        conclusion=conclude_text,
                         status="completed"
                     )
                     session.add_plan_version(new_plan, [conclude_step])
+                    
+                # When user provides answer, mark as FAILED (not success)
+                if stored_user_plan:
+                    user_plan_dict = stored_user_plan
+                    goal_achieved = False  # Always mark as failed when user provides answer
+                    print("\n[STATUS] User-provided answer detected - marking as FAILED")
+                    session.mark_complete(
+                        PerceptionSnapshot(
+                            entities=[],
+                            result_requirement="Step limit reached",
+                            original_goal_achieved=goal_achieved,
+                            reasoning=user_plan_dict.get('reasoning_note', 'User provided answer'),
+                            local_goal_achieved=True,
+                            local_reasoning="User intervention due to step limit",
+                            last_tooluse_summary="",
+                            solution_summary=user_plan_dict.get('solution_summary', conclude_text),
+                            confidence=user_plan_dict.get('confidence', '0.5')
+                        ),
+                        final_answer=conclude_text
+                    )
+                else:
+                    # Check if we're concluding due to failure
+                    is_conclusion_due_to_failure = (
+                        "conclude with current results" in conclude_text.lower() or
+                        ("conclude" in conclude_text.lower() and "current results" in conclude_text.lower())
+                    )
+                    
+                    # Mark session complete with proper goal achievement status
+                    goal_achieved = not is_conclusion_due_to_failure
+                    session.mark_complete(
+                        PerceptionSnapshot(
+                            entities=[],
+                            result_requirement="Step limit reached",
+                            original_goal_achieved=goal_achieved,
+                            reasoning="Step limit reached, concluding with current results" if is_conclusion_due_to_failure else "Step limit reached, goal achieved",
+                            local_goal_achieved=True,
+                            local_reasoning="User intervention due to step limit",
+                            last_tooluse_summary="",
+                            solution_summary=conclude_text,
+                            confidence="0.5" if is_conclusion_due_to_failure else "0.8"
+                        ),
+                        final_answer=conclude_text
+                    )
                 return None
             return self.get_next_step(session, query, step)
         else:
@@ -358,9 +483,16 @@ class AgentLoop:
             })
             suggested_plan = decision_output.get("plan_text", ["Conclude"])
             
-            # Show agent is listening - trigger human-in-loop
-            print("\n[LISTENING] Agent is listening for your guidance...")
-            new_plan = ask_user_for_plan(context, suggested_plan)
+            # Check if we have a stored user plan from previous lifeline
+            stored_user_plan = UserPlanStorage.get_user_plan(session.session_id)
+            if stored_user_plan:
+                print("\n[USING STORED PLAN] Using user-provided plan from previous lifeline...")
+                user_plan_dict = stored_user_plan
+                new_plan = [user_plan_dict.get('final_answer', 'User-provided answer')]
+            else:
+                # Show agent is listening - trigger human-in-loop
+                print("\n[LISTENING] Agent is listening for your guidance...")
+                new_plan, user_plan_dict = ask_user_for_plan(context, suggested_plan, session.session_id)
             
             # Agent uses the plan provided by user (shows agent listens)
             if new_plan:

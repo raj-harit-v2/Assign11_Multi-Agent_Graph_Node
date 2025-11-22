@@ -177,7 +177,14 @@ def print_session_details(session):
 
 
 async def run_single_test(test_id: int, query_type: str, query_text: str):
-    """Run a single test case with detailed output."""
+    """
+    Run a single test case with detailed output.
+    
+    IMPORTANT: This function runs the query ONCE.
+    - Calls agent_loop.run() exactly ONCE per query
+    - max_steps=3 limits the number of steps (not executions)
+    - max_lifelines_per_step=3 limits retries per step (not executions)
+    """
     print_test_header(test_id, query_type, query_text)
     
     try:
@@ -209,14 +216,18 @@ async def run_single_test(test_id: int, query_type: str, query_text: str):
         )
         print("[OK] Agent Loop initialized")
         
-        # Run agent
-        print("\n[Running Agent...]")
+        # Run agent - THIS RUNS THE QUERY ONCE
+        print("\n[Running Agent - Query executes ONCE...]")
         query_name = f"Test {test_id} - {query_type}"
+        # NOTE: agent_loop.run() is called ONCE per query
+        # Inside it may execute up to 3 steps (max_steps=3)
+        # Each step may retry up to 3 times (max_lifelines_per_step=3)
         session = await agent_loop.run(
             query=query_text,
             test_id=test_id,
             query_name=query_name
         )
+        print(f"[Completed] Query executed ONCE with {len(session.plan_versions)} plan version(s)")
         
         # Print detailed session information
         print_session_details(session)
@@ -242,11 +253,21 @@ async def run_single_test(test_id: int, query_type: str, query_text: str):
 
 
 async def main():
-    """Run all 10 test cases."""
+    """
+    Run all 10 test cases.
+    
+    IMPORTANT: Each query runs ONCE per test.
+    - max_steps: 3 means maximum 3 steps per query (not 3 query executions)
+    - max_lifelines_per_step: 3 means 3 retries per step if it fails (not 3 query executions)
+    - Each query executes: Step 1, Step 2, Step 3 (if needed), then stops
+    """
     print("\n" + "=" * 80)
     print("SESSION 10 DETAILED TEST - 10 CASES")
     print("=" * 80)
     print(f"Start Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("\n[NOTE] Each query runs ONCE. max_steps=3 means max 3 steps per query.")
+    print("[NOTE] max_lifelines_per_step=3 means max 3 retries per step (if step fails).")
+    print("=" * 80)
     
     # Set random seed for reproducibility
     random.seed(42)
@@ -268,12 +289,18 @@ async def main():
     print("\n" + "-" * 80)
     print("TEST EXECUTION")
     print("-" * 80)
+    print("[IMPORTANT] Each query will be executed ONCE (not 3 times)")
+    print("[IMPORTANT] Each query can have up to 3 steps (max_steps=3)")
+    print("[IMPORTANT] Each step can retry up to 3 times if it fails (max_lifelines_per_step=3)")
+    print("-" * 80)
     
-    # Run tests
+    # Run tests - EACH QUERY RUNS ONCE
     results = []
     for test_id, query_type, query_text in test_queries:
+        print(f"\n[EXECUTING] Test {test_id}/10 - Running query ONCE...")
         session = await run_single_test(test_id, query_type, query_text)
         results.append((test_id, query_type, session))
+        print(f"[COMPLETED] Test {test_id}/10 - Query executed ONCE")
         
         # Small delay between tests
         if test_id < 10:

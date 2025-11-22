@@ -82,7 +82,7 @@ def build_safe_globals(mcp_funcs: dict, multi_mcp=None) -> dict:
 # ───────────────────────────────────────────────────────────────
 # MAIN EXECUTOR
 # ───────────────────────────────────────────────────────────────
-async def run_user_code(code: str, multi_mcp, step_description: str = "", query: str = "") -> dict:
+async def run_user_code(code: str, multi_mcp, step_description: str = "", query: str = "", completed_steps: list = None) -> dict:
     """
     Execute user code with retry logic and human-in-loop on failure.
     
@@ -91,10 +91,13 @@ async def run_user_code(code: str, multi_mcp, step_description: str = "", query:
         multi_mcp: MultiMCP instance
         step_description: Description of the step (for human-in-loop context)
         query: Original query (for human-in-loop context)
+        completed_steps: List of completed steps with their execution results
     
     Returns:
         dict: Execution result with status, result/error, retry_count
     """
+    if completed_steps is None:
+        completed_steps = []
     control_manager = ControlManager()
     max_retries = control_manager.get_max_retries()
     
@@ -123,6 +126,8 @@ async def run_user_code(code: str, multi_mcp, step_description: str = "", query:
             }
 
             sandbox = build_safe_globals(tool_funcs, multi_mcp)
+            # Add completed_steps to sandbox for code execution context
+            sandbox["completed_steps"] = completed_steps
             local_vars = {}
 
             cleaned_code = textwrap.dedent(code.strip())

@@ -1,5 +1,36 @@
 import json
+import sys
 from pathlib import Path
+
+# Fix for Python 3.13: collections.Callable was moved to collections.abc
+# This must be done before importing pdb
+import collections
+import collections.abc
+if not hasattr(collections, 'Callable'):
+    collections.Callable = collections.abc.Callable
+
+# Fix for Windows readline issue - patch readline before pdb imports it
+import sys
+if sys.platform == 'win32':
+    try:
+        import readline
+        # Patch readline to avoid AttributeError on Windows
+        if not hasattr(readline, 'backend'):
+            readline.backend = None
+        # Also patch any other missing attributes that pdb might need
+        if not hasattr(readline, 'set_completer'):
+            readline.set_completer = lambda x: None
+        if not hasattr(readline, 'parse_and_bind'):
+            readline.parse_and_bind = lambda x: None
+    except ImportError:
+        # readline not available on Windows, create a dummy module
+        import types
+        readline = types.ModuleType('readline')
+        readline.backend = None
+        readline.set_completer = lambda x: None
+        readline.parse_and_bind = lambda x: None
+        sys.modules['readline'] = readline
+
 from agentSession import AgentSession, Step, ToolCode, PerceptionSnapshot
 
 # Get project root directory (parent of agent directory)
@@ -114,5 +145,51 @@ session.state.update({
 session.simulate_live()
 
 # Print final JSON
-# import pdb; pdb.set_trace()
-# print(json.dumps(session.to_json(), indent=2))
+print("\n" + "=" * 80)
+print("DEBUGGING SESSION - Inspect session object")
+print("=" * 80)
+print("\nAvailable variables:")
+print("  - session: AgentSession object")
+print("  - session.state: Final session state")
+print("  - session.to_json(): Full session JSON")
+print("\nQuick commands (type when debugger starts):")
+print("  n, n, p session.state    - Step 2 lines, print state")
+print("  p session.to_json()     - Print full JSON")
+print("  pp session.state        - Pretty print state")
+print("  c                        - Continue")
+print("  q                        - Quit")
+print("\n" + "-" * 80)
+print("Starting debugger...")
+print("-" * 80)
+
+# Use pdb directly - works better with Python 3.13
+# The collections.Callable and readline fixes above should make this work
+import pdb
+
+try:
+    print("\n[DEBUGGER] Entering pdb debugger...")
+    print("[DEBUGGER] Type 'n, n, p session.state' to step and print")
+    print("[DEBUGGER] Type 'c' to continue or 'q' to quit\n")
+    pdb.set_trace()
+except (AttributeError, Exception) as e:
+    if 'readline' in str(e) or 'backend' in str(e):
+        print(f"\n[WARNING] readline error: {e}")
+        print("[INFO] Install pyreadline for better pdb support: pip install pyreadline")
+        print("[INFO] Showing session data instead...")
+        print("\n" + "=" * 80)
+        print("SESSION STATE:")
+        print("=" * 80)
+        print(json.dumps(session.state, indent=2))
+        print("\n" + "=" * 80)
+        print("FULL SESSION JSON:")
+        print("=" * 80)
+        print(json.dumps(session.to_json(), indent=2))
+        print("\nPress Enter to exit...")
+        input()
+    else:
+        raise
+
+print("\n" + "=" * 80)
+print("FINAL SESSION JSON OUTPUT")
+print("=" * 80)
+print(json.dumps(session.to_json(), indent=2))
