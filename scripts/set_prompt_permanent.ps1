@@ -3,8 +3,8 @@
 
 $profileContent = @"
 function prompt {
-    if (`$PWD.Path -like "*Assign11_Multi-Agent_Graph_Node*") {
-        "Asgn11> "
+    if (`$PWD.Path -like "*Assign11*") {
+        "C:\Asgn11> "
     } else {
         "PS `$(`$PWD.Path)> "
     }
@@ -19,7 +19,15 @@ if (Test-Path $PROFILE) {
         Write-Host "Prompt function added to PowerShell profile." -ForegroundColor Green
         Write-Host "Restart PowerShell or run: . `$PROFILE" -ForegroundColor Yellow
     } else {
-        Write-Host "Prompt function already exists in profile." -ForegroundColor Yellow
+        # Update existing function
+        $updatedContent = $existingContent -replace '(?s)function prompt.*?\{.*?\}', $profileContent
+        if ($updatedContent -ne $existingContent) {
+            Set-Content -Path $PROFILE -Value $updatedContent
+            Write-Host "Prompt function updated in PowerShell profile." -ForegroundColor Green
+            Write-Host "Restart PowerShell or run: . `$PROFILE" -ForegroundColor Yellow
+        } else {
+            Write-Host "Prompt function already correct in profile." -ForegroundColor Yellow
+        }
     }
 } else {
     # Create profile directory if it doesn't exist
@@ -33,4 +41,3 @@ if (Test-Path $PROFILE) {
 }
 
 Write-Host "`nProfile location: $PROFILE" -ForegroundColor Cyan
-
