@@ -2,14 +2,26 @@ import os
 import json
 import uuid
 import datetime
+from dataclasses import dataclass
+from typing import Optional
 from pathlib import Path
 from dotenv import load_dotenv
 from google import genai
 from google.genai.errors import ServerError
+from core.plan_graph import Route
 
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
+
+
+@dataclass
+class PerceptionResult:
+    """Result from perception layer with routing decision."""
+    route: Route
+    goal_met: bool
+    instruction_to_summarize: Optional[str] = None
+    notes: str = ""
 
 class Perception:
     def __init__(self, perception_prompt_path: str, api_key: str | None = None, model: str = "gemini-2.0-flash"):
@@ -107,5 +119,97 @@ class Perception:
                 "solution_summary": "Not ready yet",
                 "confidence": "0.0"
             }
+
+    def perceive_root(self, user_query: str, memory: list = None) -> PerceptionResult:
+        """
+        Analyze root user query and determine routing.
+        
+        Args:
+            user_query: The user's query
+            memory: Optional memory results from search
+        
+        Returns:
+            PerceptionResult with route decision
+        """
+        if memory is None:
+            memory = []
+        
+        # Build perception input
+        perception_input = self.build_perception_input(
+            raw_input=user_query,
+            memory=memory,
+            snapshot_type="user_query"
+        )
+        
+        # Run perception
+        result = self.run(perception_input)
+        
+        # Determine route based on goal achievement
+        goal_met = result.get("original_goal_achieved", False)
+        
+        # If goal is already met, route to summarize
+        if goal_met:
+            return PerceptionResult(
+                route=Route.SUMMARIZE,
+                goal_met=True,
+                instruction_to_summarize="Produce concise answer from available information",
+                notes=result.get("reasoning", "Goal already achieved")
+            )
+        
+        # Otherwise route to decision for planning
+        return PerceptionResult(
+            route=Route.DECISION,
+            goal_met=False,
+            notes=result.get("reasoning", "Initial perception completed")
+        )
+
+    def perceive_step_output(
+        self, 
+        step_id: str, 
+        output: str, 
+        context: dict = None
+    ) -> PerceptionResult:
+        """
+        Analyze step execution output and determine routing.
+        
+        Args:
+            step_id: ID of the step that was executed
+            output: Output from step execution
+            context: Optional context information
+        
+        Returns:
+            PerceptionResult with route decision
+        """
+        if context is None:
+            context = {}
+        
+        # Build perception input for step output
+        perception_input = self.build_perception_input(
+            raw_input=f"Step {step_id} output: {output}",
+            memory=[],
+            snapshot_type="step_output"
+        )
+        
+        # Run perception
+        result = self.run(perception_input)
+        
+        # Determine route based on goal achievement
+        goal_met = result.get("original_goal_achieved", False)
+        
+        # If goal is met, route to summarize
+        if goal_met:
+            return PerceptionResult(
+                route=Route.SUMMARIZE,
+                goal_met=True,
+                instruction_to_summarize=result.get("solution_summary", "Produce final answer"),
+                notes=result.get("reasoning", "Goal achieved after step execution")
+            )
+        
+        # Otherwise continue with decision/execution
+        return PerceptionResult(
+            route=Route.DECISION,
+            goal_met=False,
+            notes=result.get("reasoning", "Continue execution")
+        )
 
 

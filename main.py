@@ -3,8 +3,7 @@ import yaml
 from mcp_servers.multiMCP import MultiMCP
 
 from dotenv import load_dotenv
-# from agent.agent_loop import AgentLoop
-from agent.agent_loop2 import AgentLoop
+from agent.agent_loop import AgentLoop
 from pprint import pprint
 BANNER = """
 ──────────────────────────────────────────────────────
@@ -41,9 +40,8 @@ async def interactive() -> None:
 
 
         response = await loop.run(query)
-        # response = await loop.run("What is 4 + 4?")
-        # pprint(f"🔵  Agent: {response.state['final_answer']}\n {response.state['reasoning_note']}\n")
-        print(f"🔵 Agent: {response.state['solution_summary']}\n")
+        # V2 agent loop returns string directly
+        print(f"🔵 Agent: {response}\n")
 
         follow = input("\n\nContinue? (press Enter) or type 'exit': ").strip()
         if follow.lower() in {"exit", "quit"}:

@@ -55,7 +55,8 @@ class StatisticsGenerator:
                 "min_time": float('inf'),
                 "max_time": 0.0,
                 "query_name": "",
-                "query_id": None
+                "query_id": None,
+                "test_ids": []  # List of Test_Id values for this query
             }),
             "avg_time_per_test": 0.0,
             "total_time_all_queries": 0.0,
@@ -97,6 +98,7 @@ class StatisticsGenerator:
             query_text = record.get("Query_Text", "").strip()
             query_name = record.get("Query_Name", "").strip()
             query_id = record.get("Query_Id", "")
+            test_id = record.get("Test_Id", "")
             if query_text:
                 stats["by_query_text"][query_text]["attempts"] += 1
                 if record.get("Result_Status", "").lower() == "success":
@@ -117,6 +119,14 @@ class StatisticsGenerator:
                         # If no Query_Id stored yet, or if this is the first record, store it
                         if stats["by_query_text"][query_text]["query_id"] is None:
                             stats["by_query_text"][query_text]["query_id"] = query_id_int
+                    except (ValueError, TypeError):
+                        pass
+                # Track Test_Id
+                if test_id:
+                    try:
+                        test_id_int = int(test_id)
+                        if test_id_int not in stats["by_query_text"][query_text]["test_ids"]:
+                            stats["by_query_text"][query_text]["test_ids"].append(test_id_int)
                     except (ValueError, TypeError):
                         pass
         
@@ -238,14 +248,15 @@ class StatisticsGenerator:
         # Write CSV with statistics per unique query_text
         with open(output_file, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            # Headers
+            # Headers - Test_Id added as second column
             writer.writerow([
-                "Query_Id", "Query_Text", "Query_Name", "Total_Attempts", "Successes", "Failures", 
+                "Query_Id", "Test_Id", "Query_Text", "Query_Name", "Total_Attempts", "Successes", "Failures", 
                 "Success_Rate_Percent", "Total_Time_Seconds", "Avg_Time_Seconds", 
                 "Min_Time_Seconds", "Max_Time_Seconds"
             ])
             
             # Write data for each unique query_text
+            # If a query has multiple Test_Id values, create separate rows
             for query_text, data in stats["by_query_text"].items():
                 attempts = data["attempts"]
                 successes = data["successes"]
@@ -256,20 +267,41 @@ class StatisticsGenerator:
                 min_time = data["min_time"] if data["min_time"] != float('inf') else 0.0
                 max_time = data["max_time"]
                 query_id = data["query_id"] if data["query_id"] is not None else ""
+                test_ids = data.get("test_ids", [])
                 
-                writer.writerow([
-                    query_id,  # Query_Id first for easy reference
-                    query_text[:200],  # Truncate long queries
-                    data["query_name"][:100] if data["query_name"] else "",
-                    attempts,
-                    successes,
-                    failures,
-                    f"{success_rate:.2f}",
-                    f"{total_time:.3f}",
-                    f"{avg_time:.3f}",
-                    f"{min_time:.3f}",
-                    f"{max_time:.3f}"
-                ])
+                # If multiple Test_Id values, create one row per Test_Id
+                if test_ids:
+                    for test_id in test_ids:
+                        writer.writerow([
+                            query_id,
+                            test_id,  # Test_Id as second column
+                            query_text[:200],  # Truncate long queries
+                            data["query_name"][:100] if data["query_name"] else "",
+                            attempts,
+                            successes,
+                            failures,
+                            f"{success_rate:.2f}",
+                            f"{total_time:.3f}",
+                            f"{avg_time:.3f}",
+                            f"{min_time:.3f}",
+                            f"{max_time:.3f}"
+                        ])
+                else:
+                    # No Test_Id available, write with empty Test_Id
+                    writer.writerow([
+                        query_id,
+                        "",  # Empty Test_Id
+                        query_text[:200],
+                        data["query_name"][:100] if data["query_name"] else "",
+                        attempts,
+                        successes,
+                        failures,
+                        f"{success_rate:.2f}",
+                        f"{total_time:.3f}",
+                        f"{avg_time:.3f}",
+                        f"{min_time:.3f}",
+                        f"{max_time:.3f}"
+                    ])
         
         print(f"Query statistics CSV saved to: {output_path}")
         return str(output_file)

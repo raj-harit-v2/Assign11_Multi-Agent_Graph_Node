@@ -5,9 +5,12 @@ import time
 import builtins
 import textwrap
 import re
+from typing import Tuple, Optional, Any
 from datetime import datetime
 from core.control_manager import ControlManager
 from core.human_in_loop import ask_user_for_tool_result
+from core.plan_graph import CodeVariant, StepNode
+from core.context_manager import ContextManager
 
 # ───────────────────────────────────────────────────────────────
 # CONFIG
@@ -248,3 +251,128 @@ def make_tool_proxy(tool_name: str, mcp):
     async def _tool_fn(*args):
         return await mcp.function_wrapper(tool_name, *args)
     return _tool_fn
+
+
+# ───────────────────────────────────────────────────────────────
+# CODE VARIANT EXECUTION (V2)
+# ───────────────────────────────────────────────────────────────
+async def run_code_variant(
+    variant: CodeVariant, 
+    context: ContextManager,
+    multi_mcp,
+    step_description: str = "",
+    query: str = "",
+    completed_steps: list = None
+) -> Tuple[bool, Any, Optional[str]]:
+    """
+    Execute a single code variant.
+    
+    Args:
+        variant: CodeVariant to execute
+        context: ContextManager for tracking
+        multi_mcp: MultiMCP instance
+        step_description: Description of the step
+        query: Original query
+        completed_steps: List of completed steps
+    
+    Returns:
+        Tuple of (success: bool, result: Any, error: Optional[str])
+    """
+    if completed_steps is None:
+        completed_steps = []
+    
+    # Increment retry count
+    variant.retries += 1
+    
+    # Execute the code
+    result = await run_user_code(
+        variant.source,
+        multi_mcp,
+        step_description=step_description,
+        query=query,
+        completed_steps=completed_steps
+    )
+    
+    if result.get("status") == "success":
+        return True, result.get("result"), None
+    else:
+        error = result.get("error", "Unknown error")
+        return False, None, error
+
+
+async def execute_step(
+    node: StepNode,
+    context: ContextManager,
+    multi_mcp,
+    step_description: str = "",
+    query: str = "",
+    completed_steps: list = None
+) -> dict:
+    """
+    Execute a step node with code variants (A/B/C retry logic).
+    
+    Args:
+        node: StepNode to execute
+        context: ContextManager for tracking
+        multi_mcp: MultiMCP instance
+        step_description: Description of the step
+        query: Original query
+        completed_steps: List of completed steps
+    
+    Returns:
+        dict: Execution result with variant tracking
+    """
+    if completed_steps is None:
+        completed_steps = []
+    
+    variants_tried = []
+    last_error = None
+    
+    # Try each variant in order
+    for variant in node.variants:
+        variants_tried.append(variant.name)
+        
+        success, result, error = await run_code_variant(
+            variant,
+            context,
+            multi_mcp,
+            step_description=node.description,
+            query=query,
+            completed_steps=completed_steps
+        )
+        
+        if success:
+            # Success - register result and update globals
+            globals_delta = {"last_result": result, "last_node": node.index}
+            context.register_step_result(
+                node.index,
+                True,
+                result,
+                globals_delta=globals_delta,
+                error=None
+            )
+            
+            return {
+                "status": "success",
+                "result": result,
+                "variants_tried": variants_tried,
+                "variant_succeeded": variant.name,
+                "node_id": node.index
+            }
+        
+        last_error = error
+    
+    # All variants failed
+    context.register_step_result(
+        node.index,
+        False,
+        None,
+        error=last_error
+    )
+    
+    return {
+        "status": "error",
+        "error": last_error or "All variants failed",
+        "variants_tried": variants_tried,
+        "node_id": node.index
+    }
