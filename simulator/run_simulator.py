@@ -7,7 +7,7 @@ import asyncio
 import yaml
 from pathlib import Path
 from mcp_servers.multiMCP import MultiMCP
-from agent.agent_loop2 import AgentLoop
+from agent.agent_loop import AgentLoop
 from simulator.sleep_manager import sleep_after_test, sleep_after_batch
 from utils.csv_manager import CSVManager
 

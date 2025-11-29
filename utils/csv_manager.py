@@ -28,10 +28,10 @@ class CSVManager:
         # Initialize tool_performance.csv
         if not self.tool_performance_file.exists():
             headers = [
-                "Test_Id", "Query_Id", "Query_Name", "Query_Text", "Query_Answer", "Plan_Used", "Result_Status",
+                "Test_Id", "Query_Id", "Query_Name", "Query_Text", "Query_Answer", "Correct_Answer_Expected", "Plan_Used", "Result_Status",
                 "Start_Datetime", "End_Datetime", "Elapsed_Time", "Plan_Step_Count",
                 "Tool_Name", "Retry_Count", "Error_Message", "Final_State",
-                "Api_Call_Type", "Step_Details", "Nodes_Called", "Nodes_Compact", "Node_Count", "Nodes_Exe_Path"
+                "Api_Call_Type", "LLM_Provider", "Step_Details", "Nodes_Called", "Nodes_Compact", "Node_Count", "Nodes_Exe_Path"
             ]
             self._write_csv_headers(self.tool_performance_file, headers)
         
@@ -253,7 +253,7 @@ class CSVManager:
             except:
                 pass
         
-        # Format nodes in compact format
+        # Format nodes in compact format: "node_id:variant" (e.g., "0:A, 1:A, 2:A" or "0:A, 1F1:B")
         compact_list = []
         for node_id in nodes_list:
             # Check node_variants first
@@ -264,31 +264,31 @@ class CSVManager:
                     # Remove numeric prefix, keep variant suffix
                     variant_suffix = variant.lstrip("0123456789")
                     if variant_suffix:
-                        compact_list.append(variant_suffix)
+                        compact_list.append(f"{node_id}:{variant_suffix}")
                     else:
-                        compact_list.append(variant)
+                        compact_list.append(f"{node_id}:{variant}")
                 else:
-                    compact_list.append(variant)
+                    compact_list.append(f"{node_id}:{variant}")
             elif node_id in variant_map:
                 variant = variant_map[node_id]
                 # Extract variant suffix
                 variant_suffix = variant.lstrip("0123456789")
                 if variant_suffix:
-                    compact_list.append(variant_suffix)
+                    compact_list.append(f"{node_id}:{variant_suffix}")
                 else:
-                    compact_list.append(variant)
+                    compact_list.append(f"{node_id}:{variant}")
             else:
                 # Check if node is a fallback (contains F)
                 if "F" in node_id:
                     # Fallback node: extract fallback number (e.g., "1F1" -> "F1")
                     parts = node_id.split("F")
                     if len(parts) > 1:
-                        compact_list.append(f"F{parts[1]}")
+                        compact_list.append(f"{node_id}:F{parts[1]}")
                     else:
-                        compact_list.append(node_id)
+                        compact_list.append(f"{node_id}:{node_id}")
                 else:
                     # Regular node: default to "A"
-                    compact_list.append("A")
+                    compact_list.append(f"{node_id}:A")
         
         return ", ".join(compact_list) if compact_list else ""
     
@@ -314,75 +314,109 @@ class CSVManager:
     
     def log_tool_performance(
         self,
-        test_id: int,
         query_id: int,
-        query_name: str,
-        query_text: str,
-        query_answer: str,
         plan_used: List[str],
-        result_status: str,
-        start_datetime: str,
-        end_datetime: str,
-        elapsed_time: str,
         plan_step_count: int,
+        query_name: str = "",
+        query_text: str = "",
+        query_answer: str = "",
+        correct_answer_expected: str = "",
+        result_status: str = "success",
+        elapsed_time: float = 0.0,
+        api_call_type: str = "",
+        llm_provider: str = "",
+        step_details: str = "",
+        nodes_called: List = None,
+        nodes_compact: str = "",
+        node_count: int = 0,
+        nodes_exe_path: str = "",
+        final_state: Dict = None,
+        test_id: int = None,
+        start_datetime: str = "",
+        end_datetime: str = "",
         tool_name: str = "",
         retry_count: int = 0,
-        error_message: str = "",
-        final_state: Dict = None,
-            api_call_type: str = "",
-            step_details: str = "",
-            nodes_called: str = "",
-            nodes_exe_path: str = ""
-        ):
+        error_message: str = ""
+    ):
         """
         Log tool performance to tool_performance.csv.
         
         Args:
-            test_id: Test ID number
             query_id: Query ID from query_text.csv (Bigint)
+            plan_used: List of plan steps (will be JSON encoded)
+            plan_step_count: Number of steps in plan
             query_name: Query name/description
             query_text: The actual query text used
             query_answer: The final answer for the query
-            plan_used: List of plan steps (will be JSON encoded)
+            correct_answer_expected: The expected correct answer (for validation)
             result_status: "success" or "failure"
-            start_datetime: Start timestamp
-            end_datetime: End timestamp
-            elapsed_time: Elapsed time string
-            plan_step_count: Number of steps in plan
-            tool_name: Name of tool used
-            retry_count: Number of retries
-            error_message: Error message if any
-            final_state: Final state dictionary (will be JSON encoded)
+            elapsed_time: Elapsed time (float or string)
             api_call_type: Type of API call (e.g., "vector_search", "graph_query", "llm_call", "tool_execution")
+            llm_provider: LLM provider used (e.g., "Google API", "Ollama", "Mixed")
             step_details: JSON string of step execution details
-            nodes_called: JSON string of node IDs executed in order
+            nodes_called: List or JSON string of node IDs executed in order
+            nodes_compact: Pre-formatted compact nodes string (optional, will be calculated if not provided)
+            node_count: Number of nodes executed (optional, will be calculated if not provided)
             nodes_exe_path: Execution path string (e.g., "0->0F1->0F2->1->2->2F1")
+            final_state: Final state dictionary (will be JSON encoded)
+            test_id: Test ID number (optional, will use query_id if not provided)
+            start_datetime: Start timestamp (optional)
+            end_datetime: End timestamp (optional)
+            tool_name: Name of tool used (optional)
+            retry_count: Number of retries (optional)
+            error_message: Error message if any (optional)
         """
+        # Get or generate test_id
+        if test_id is None:
+            test_id = query_id
+        
+        # Get current datetime if not provided
+        if not start_datetime:
+            start_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if not end_datetime:
+            end_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Convert elapsed_time to string if it's a float
+        if isinstance(elapsed_time, float):
+            elapsed_time_str = f"{elapsed_time:.3f}"
+        else:
+            elapsed_time_str = str(elapsed_time)
+        
         plan_json = json.dumps(plan_used, ensure_ascii=False)
         final_state_json = json.dumps(final_state or {}, ensure_ascii=False)
         
-        # Format nodes in compact format
-        nodes_compact = self._format_nodes_compact(nodes_called, step_details)
+        # Handle nodes_called - convert list to JSON string if needed
+        if nodes_called is None:
+            nodes_called = []
+        if isinstance(nodes_called, list):
+            nodes_called_json = json.dumps(nodes_called, ensure_ascii=False)
+        else:
+            nodes_called_json = str(nodes_called)
         
-        # Count nodes
-        try:
-            nodes_list = json.loads(nodes_called) if nodes_called else []
-            node_count = len(nodes_list)
-        except:
-            node_count = 0
+        # Format nodes in compact format if not provided
+        if not nodes_compact:
+            nodes_compact = self._format_nodes_compact(nodes_called_json, step_details)
+        
+        # Count nodes if not provided
+        if node_count == 0:
+            try:
+                nodes_list = json.loads(nodes_called_json) if nodes_called_json else []
+                node_count = len(nodes_list)
+            except:
+                node_count = 0
         
         # Format execution path (e.g., "0->0F1->0F2->1->2->2F1")
         # Use provided nodes_exe_path or generate from nodes_called
         if nodes_exe_path:
             execution_path = nodes_exe_path
         else:
-            execution_path = self._format_execution_path(nodes_called)
+            execution_path = self._format_execution_path(nodes_called_json)
         
         row = [
-            test_id, query_id, query_name, query_text, query_answer, plan_json, result_status,
-            start_datetime, end_datetime, elapsed_time, plan_step_count,
+            test_id, query_id, query_name, query_text, query_answer, correct_answer_expected, plan_json, result_status,
+            start_datetime, end_datetime, elapsed_time_str, plan_step_count,
             tool_name, retry_count, error_message, final_state_json,
-            api_call_type, step_details, nodes_called, nodes_compact, node_count, execution_path
+            api_call_type, llm_provider, step_details, nodes_called_json, nodes_compact, node_count, execution_path
         ]
         
         with open(self.tool_performance_file, 'a', newline='', encoding='utf-8') as f:
@@ -391,36 +425,33 @@ class CSVManager:
     
     def get_all_queries(self) -> List[Dict]:
         """Get all queries from query_text.csv."""
-        queries = []
         if not self.query_text_file.exists():
-            return queries
+            return []
         
+        # Optimized: Use list comprehension for better performance
         with open(self.query_text_file, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
-            for row in reader:
-                queries.append(row)
-        
-        return queries
+            return list(reader)
     
     def get_tool_performance(self) -> List[Dict]:
         """Get all tool performance records."""
-        records = []
         if not self.tool_performance_file.exists():
-            return records
+            return []
+        
+        # Optimized: Use list comprehension with helper function for better performance
+        def _parse_row(row):
+            """Parse JSON fields in a row."""
+            try:
+                row['Plan_Used'] = json.loads(row.get('Plan_Used', '[]'))
+            except:
+                row['Plan_Used'] = []
+            try:
+                row['Final_State'] = json.loads(row.get('Final_State', '{}'))
+            except:
+                row['Final_State'] = {}
+            return row
         
         with open(self.tool_performance_file, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
-            for row in reader:
-                # Parse JSON fields
-                try:
-                    row['Plan_Used'] = json.loads(row.get('Plan_Used', '[]'))
-                except:
-                    row['Plan_Used'] = []
-                try:
-                    row['Final_State'] = json.loads(row.get('Final_State', '{}'))
-                except:
-                    row['Final_State'] = {}
-                records.append(row)
-        
-        return records
+            return [_parse_row(row) for row in reader]
 

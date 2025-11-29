@@ -84,7 +84,8 @@ class MultiMCP:
     async def call_tool(self, tool_name: str, arguments: dict) -> Any:
         entry = self.tool_map.get(tool_name)
         if not entry:
-            raise ValueError(f"Tool '{tool_name}' not found on any server.")
+            available_tools = list(self.tool_map.keys())
+            raise ValueError(f"Tool '{tool_name}' not found on any server. Available tools: {available_tools[:20]}")
 
         config = entry["config"]
         params = StdioServerParameters(

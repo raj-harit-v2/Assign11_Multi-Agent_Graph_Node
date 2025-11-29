@@ -35,7 +35,7 @@ GEMMA_MODEL = "gemma3:12b"
 PHI_MODEL = "phi4:latest"
 QWEN_MODEL = "qwen2.5:32b-instruct-q4_0 "
 CHUNK_SIZE = 256
-CHUNK_OVERLAP = 40
+CHUNK_OVERLAP = 120
 MAX_CHUNK_LENGTH = 512  # characters
 TOP_K = 3  # FAISS top-K matches
 ROOT = Path(__file__).parent.resolve()
@@ -48,8 +48,10 @@ def get_embedding(text: str) -> np.ndarray:
 
 def chunk_text(text, size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     words = text.split()
+    # Optimized: Use generator expression for better memory efficiency
     for i in range(0, len(words), size - overlap):
-        yield " ".join(words[i:i+size])
+        chunk_words = words[i:i+size]
+        yield " ".join(chunk_words)
 
 def mcp_log(level: str, message: str) -> None:
     sys.stderr.write(f"{level}: {message}\n")

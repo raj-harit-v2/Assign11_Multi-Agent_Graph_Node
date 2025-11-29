@@ -1,21 +1,28 @@
+# Search Configuration
+# DuckDuckGo is the default search engine in text mode for all information queries
+search:
+  default_engine: "duckduckgo"  # Default search engine for all information queries
+  text_mode_only: true          # Force text-only mode (no JavaScript)
+  force_text_mode: true         # Explicitly request text mode for all searches
+
 mcp_servers:
   - id: math
     script: mcp_server_1.py
-    cwd: C:\A1_School_ai_25\001_My_proj_AI\Assign10_Multi-Agent\mcp_servers
+    cwd: C:\A1_School_ai_25\001_My_proj_AI\Assign11_Multi-Agent_Graph_Node\mcp_servers
     description: "Most used Math tools, including special string-int conversions, fibonacci, python sandbox, shell and sql related tools"
     capabilities: ["add", "subtract", "multiply", "divide", "power", "cbrt", "factorial", "remainder", "sin", "cos", "tan", "mine", "create_thumbnail", "strings_to_chars_to_int", "int_list_to_exponential_sum", "fibonacci_numbers"]
   - id: documents
     script: mcp_server_2.py
-    cwd: C:\A1_School_ai_25\001_My_proj_AI\Assign10_Multi-Agent\mcp_servers
+    cwd: C:\A1_School_ai_25\001_My_proj_AI\Assign11_Multi-Agent_Graph_Node\mcp_servers
     description: "Load, search and extract within webpages, local PDFs or other documents. Web and document specialist"
     capabilities: ["search_stored_documents_rag", "convert_webpage_url_into_markdown", "extract_pdf"]
   - id: websearch
     script: mcp_server_3.py
-    cwd: C:\A1_School_ai_25\001_My_proj_AI\Assign10_Multi-Agent\mcp_servers
-    description: "Webtools to search internet for queries and fetch content for a specific web page"
-    capabilities: ["duckduckgo_search_results", "download_raw_html_from_url"]
+    cwd: C:\A1_School_ai_25\001_My_proj_AI\Assign11_Multi-Agent_Graph_Node\mcp_servers
+    description: "Webtools to search internet for queries and fetch content for a specific web page. Uses DuckDuckGo as default search engine in text mode. Supports markdown conversion for enhanced content extraction."
+    capabilities: ["duckduckgo_search_results", "duckduckgo_search_with_markdown", "download_raw_html_from_url"]
   - id: mixed
     script: mcp_server_4.py
-    cwd: C:\A1_School_ai_25\001_My_proj_AI\Assign10_Multi-Agent\mcp_servers
+    cwd: C:\A1_School_ai_25\001_My_proj_AI\Assign11_Multi-Agent_Graph_Node\mcp_servers
     description: "Most used Math tools"
     capabilities: ["add", "subtract", "multiply", "divide"]

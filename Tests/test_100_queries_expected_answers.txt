@@ -1,0 +1,345 @@
+# Test 100 Queries with 5 Duplicates - Expected Answers
+# Format: Query | Expected Answer | Answer Type | Notes
+# Use this file to verify correct answers before running the diagnostic test
+# After verification, the test script will use this file to self-verify results
+
+# ============================================================================
+# INFORMATION QUERIES (30 queries)
+# ============================================================================
+
+# Test 1: Chemical Formula
+What is the chemical formula for water? | H2O | factual | Should return H2O, not "Water | H2O | CID 962"
+
+# Test 2: Author
+Who wrote the novel '1984'? | George Orwell | factual | Should return author name, not book title
+
+# Test 3: Capital City
+What is the capital of Japan? | Tokyo | factual | Should extract city name
+
+# Test 4: Speed of Light
+What is the speed of light? | 299792458 | factual | Should return numeric value in m/s (or 300000000)
+
+# Test 5: Capital City
+What is the capital of Australia? | Canberra | factual | Should extract city name
+
+# Test 6: Inventor
+Who invented the telephone? | Alexander Graham Bell | factual | Should return inventor name
+
+# Test 7: Planet
+What is the largest planet in our solar system? | Jupiter | factual | Should return planet name
+
+# Test 8: Year
+What year did World War II end? | 1945 | factual | Should return year
+
+# Test 9: Country
+What is the smallest country in the world? | Vatican City | factual | Should return country name
+
+# Test 10: Count
+How many chambers does a human heart have? | 4 | factual | Should return number
+
+# Test 11: Organ
+What is the largest organ in the human body? | Skin | factual | Should return organ name
+
+# Test 12: Gas
+What gas do plants absorb from the atmosphere? | Carbon dioxide | factual | Should return gas name (CO2)
+
+# Test 13: Animal
+What is the national animal of India? | Tiger | factual | Should return animal name
+
+# Test 14: Artist
+Who painted the Mona Lisa? | Leonardo da Vinci | factual | Should return artist name
+
+# Test 15: Capital City
+What is the capital of France? | Paris | factual | Should extract city name
+
+# Test 16: Capital City
+What is the capital of Germany? | Berlin | factual | Should extract city name
+
+# Test 17: Capital City
+What is the capital of Italy? | Rome | factual | Should extract city name
+
+# Test 18: Capital City
+What is the capital of Spain? | Madrid | factual | Should extract city name
+
+# Test 19: Capital City
+What is the capital of Brazil? | Brasilia | factual | Should extract city name
+
+# Test 20: Capital City
+What is the capital of Canada? | Ottawa | factual | Should extract city name
+
+# Test 21: Capital City
+What is the capital of Mexico? | Mexico City | factual | Should extract city name
+
+# Test 22: Capital City
+What is the capital of Russia? | Moscow | factual | Should extract city name
+
+# Test 23: Capital City
+What is the capital of China? | Beijing | factual | Should extract city name
+
+# Test 24: Capital City
+What is the capital of India? | New Delhi | factual | Should extract city name
+
+# Test 25: Capital City
+What is the capital of South Korea? | Seoul | factual | Should extract city name
+
+# Test 26: Capital City
+What is the capital of Egypt? | Cairo | factual | Should extract city name
+
+# Test 27: Capital City
+What is the capital of South Africa? | Cape Town | factual | Should extract city name (or Pretoria)
+
+# Test 28: Capital City
+What is the capital of Argentina? | Buenos Aires | factual | Should extract city name
+
+# Test 29: Capital City
+What is the capital of Chile? | Santiago | factual | Should extract city name
+
+# Test 30: Capital City
+What is the capital of New Zealand? | Wellington | factual | Should extract city name
+
+# ============================================================================
+# MATH QUERIES (30 queries)
+# ============================================================================
+
+# Test 31: Division
+Calculate 144 divided by 12 | 12 | computation | Should return numeric result
+
+# Test 32: Division
+Calculate 200 divided by 8 | 25 | computation | Should return numeric result
+
+# Test 33: Multiplication
+Calculate 10 * 5 | 50 | computation | Should return numeric result
+
+# Test 34: Division
+What is 81 divided by 9? | 9 | computation | Should return numeric result
+
+# Test 35: Power
+What is 5 to the power of 3? | 125 | computation | Should return numeric result
+
+# Test 36: Factorial
+Find the factorial of 5 | 120 | computation | Should return numeric result
+
+# Test 37: Multiplication
+Calculate 25 multiplied by 4 | 100 | computation | Should return numeric result
+
+# Test 38: Division
+Calculate 100 divided by 4 | 25 | computation | Should return numeric result
+
+# Test 39: Multiplication
+Calculate 15 * 6 | 90 | computation | Should return numeric result
+
+# Test 40: Division
+Calculate 72 divided by 8 | 9 | computation | Should return numeric result
+
+# Test 41: Power
+What is 3 to the power of 4? | 81 | computation | Should return numeric result
+
+# Test 42: Factorial
+Find the factorial of 6 | 720 | computation | Should return numeric result
+
+# Test 43: Multiplication
+Calculate 50 * 2 | 100 | computation | Should return numeric result
+
+# Test 44: Division
+Calculate 120 divided by 10 | 12 | computation | Should return numeric result
+
+# Test 45: Multiplication
+Calculate 7 * 8 | 56 | computation | Should return numeric result
+
+# Test 46: Division
+Calculate 64 divided by 8 | 8 | computation | Should return numeric result
+
+# Test 47: Power
+What is 2 to the power of 8? | 256 | computation | Should return numeric result
+
+# Test 48: Factorial
+Find the factorial of 4 | 24 | computation | Should return numeric result
+
+# Test 49: Multiplication
+Calculate 30 * 3 | 90 | computation | Should return numeric result
+
+# Test 50: Division
+Calculate 90 divided by 9 | 10 | computation | Should return numeric result
+
+# Test 51: Multiplication
+Calculate 12 * 7 | 84 | computation | Should return numeric result
+
+# Test 52: Division
+Calculate 56 divided by 7 | 8 | computation | Should return numeric result
+
+# Test 53: Power
+What is 4 to the power of 3? | 64 | computation | Should return numeric result
+
+# Test 54: Factorial
+Find the factorial of 7 | 5040 | computation | Should return numeric result
+
+# Test 55: Multiplication
+Calculate 40 * 2 | 80 | computation | Should return numeric result
+
+# Test 56: Division
+Calculate 108 divided by 9 | 12 | computation | Should return numeric result
+
+# Test 57: Multiplication
+Calculate 9 * 9 | 81 | computation | Should return numeric result
+
+# Test 58: Division
+Calculate 84 divided by 7 | 12 | computation | Should return numeric result
+
+# Test 59: Power
+What is 6 to the power of 2? | 36 | computation | Should return numeric result
+
+# Test 60: Factorial
+Find the factorial of 8 | 40320 | computation | Should return numeric result
+
+# ============================================================================
+# DATA ANALYSIS QUERIES (20 queries)
+# ============================================================================
+
+# Test 61: Average
+Calculate the average of numbers: 5, 10, 15, 20, 25 | 15 | computation | Should calculate (5+10+15+20+25)/5 = 15
+
+# Test 62: Average
+Calculate the average of numbers: 10, 20, 30, 40, 50 | 30 | computation | Should calculate (10+20+30+40+50)/5 = 30
+
+# Test 63: Average
+Calculate the average of numbers: 100, 200, 300, 400, 500 | 300 | computation | Should calculate (100+200+300+400+500)/5 = 300
+
+# Test 64: Average
+Calculate the average of numbers: 15, 25, 35, 45, 55 | 35 | computation | Should calculate (15+25+35+45+55)/5 = 35
+
+# Test 65: Average
+Calculate the average of numbers: 20, 40, 60, 80, 100 | 60 | computation | Should calculate (20+40+60+80+100)/5 = 60
+
+# Test 66: Average
+Calculate the average of numbers: 12, 24, 36, 48, 60 | 36 | computation | Should calculate (12+24+36+48+60)/5 = 36
+
+# Test 67: Average
+Calculate the average of numbers: 7, 14, 21, 28, 35 | 21 | computation | Should calculate (7+14+21+28+35)/5 = 21
+
+# Test 68: Average
+Calculate the average of numbers: 50, 100, 150, 200, 250 | 150 | computation | Should calculate (50+100+150+200+250)/5 = 150
+
+# Test 69: Average
+Calculate the average of numbers: 8, 16, 24, 32, 40 | 24 | computation | Should calculate (8+16+24+32+40)/5 = 24
+
+# Test 70: Average
+Calculate the average of numbers: 11, 22, 33, 44, 55 | 33 | computation | Should calculate (11+22+33+44+55)/5 = 33
+
+# Test 71: Average
+Calculate the average of numbers: 6, 12, 18, 24, 30 | 18 | computation | Should calculate (6+12+18+24+30)/5 = 18
+
+# Test 72: Average
+Calculate the average of numbers: 9, 18, 27, 36, 45 | 27 | computation | Should calculate (9+18+27+36+45)/5 = 27
+
+# Test 73: Average
+Calculate the average of numbers: 13, 26, 39, 52, 65 | 39 | computation | Should calculate (13+26+39+52+65)/5 = 39
+
+# Test 74: Average
+Calculate the average of numbers: 14, 28, 42, 56, 70 | 42 | computation | Should calculate (14+28+42+56+70)/5 = 42
+
+# Test 75: Average
+Calculate the average of numbers: 16, 32, 48, 64, 80 | 48 | computation | Should calculate (16+32+48+64+80)/5 = 48
+
+# Test 76: Average
+Calculate the average of numbers: 17, 34, 51, 68, 85 | 51 | computation | Should calculate (17+34+51+68+85)/5 = 51
+
+# Test 77: Average
+Calculate the average of numbers: 19, 38, 57, 76, 95 | 57 | computation | Should calculate (19+38+57+76+95)/5 = 57
+
+# Test 78: Average
+Calculate the average of numbers: 21, 42, 63, 84, 105 | 63 | computation | Should calculate (21+42+63+84+105)/5 = 63
+
+# Test 79: Average
+Calculate the average of numbers: 23, 46, 69, 92, 115 | 69 | computation | Should calculate (23+46+69+92+115)/5 = 69
+
+# Test 80: Average
+Calculate the average of numbers: 25, 50, 75, 100, 125 | 75 | computation | Should calculate (25+50+75+100+125)/5 = 75
+
+# ============================================================================
+# COMPLEX QUERIES (10 queries)
+# ============================================================================
+
+# Test 81: Complex - Factorial + Prime Sum + GCD
+Find the factorial of 5 and calculate the sum of all prime numbers from 1 to 20, then find the greatest common divisor of 48 and 18 | 120, 77, 6 | computation | Factorial(5)=120, Primes sum=77, GCD(48,18)=6
+
+# Test 82: Complex - Average + Square Root + Multiply
+Calculate the average of numbers: 100, 200, 300, 400, 500, then find the square root of that average, and finally multiply it by 10 | 173.205 | computation | Average=300, sqrt(300)≈17.32, 17.32*10≈173.2
+
+# Test 83: Complex - Multiply + Divide + Add
+Calculate 15 * 4, then divide the result by 3, and finally add 20 | 40 | computation | 15*4=60, 60/3=20, 20+20=40
+
+# Test 84: Complex - Factorial + Power + Sum
+Find the factorial of 6, then calculate 2 to the power of 5, and finally find the sum of both results | 752 | computation | Factorial(6)=720, 2^5=32, 720+32=752
+
+# Test 85: Complex - Average + Multiply + Subtract
+Calculate the average of 10, 20, 30, then multiply by 2, and finally subtract 5 | 35 | computation | Average=20, 20*2=40, 40-5=35
+
+# Test 86: Complex - Square Root + Multiply + Add
+Find the square root of 144, then multiply by 3, and finally add 10 | 46 | computation | sqrt(144)=12, 12*3=36, 36+10=46
+
+# Test 87: Complex - Multiply + Divide + Square Root
+Calculate 25 * 4, then divide by 5, and finally find the square root | 4.472 | computation | 25*4=100, 100/5=20, sqrt(20)≈4.472
+
+# Test 88: Complex - Factorial + Power + Difference
+Find the factorial of 4, then calculate 3 to the power of 3, and finally find the difference | -3 | computation | Factorial(4)=24, 3^3=27, 24-27=-3
+
+# Test 89: Complex - Sum + Divide + Multiply
+Calculate the sum of 50, 100, 150, then divide by 3, and finally multiply by 2 | 200 | computation | Sum=300, 300/3=100, 100*2=200
+
+# Test 90: Complex - Square Root + Multiply + Subtract
+Find the square root of 81, then multiply by 2, and finally subtract 3 | 15 | computation | sqrt(81)=9, 9*2=18, 18-3=15
+
+# ============================================================================
+# PROPERTY QUERIES (10 queries)
+# ============================================================================
+
+# Test 91: Property - Security Features
+List the security features in DLF Camelia. | Security features | factual | Should list security features (24/7 security, CCTV, etc.)
+
+# Test 92: Property - Price Range 3BHK
+What are the price ranges for 3BHK apartments in DLF Camelia? | Price range 3BHK | factual | Should return price range for 3BHK units
+
+# Test 93: Property - Amenities
+What amenities are available in DLF Camelia? | Amenities | factual | Should list amenities (clubhouse, pool, gym, etc.)
+
+# Test 94: Property - Price Range 2BHK
+What are the price ranges for 2BHK apartments in DLF Camelia? | Price range 2BHK | factual | Should return price range for 2BHK units
+
+# Test 95: Property - Price Range 4BHK
+What are the price ranges for 4BHK apartments in DLF Camelia? | Price range 4BHK | factual | Should return price range for 4BHK units
+
+# Test 96: Property - Parking
+List the parking facilities in DLF Camelia. | Parking facilities | factual | Should list parking facilities
+
+# Test 97: Property - Location
+What are the location advantages of DLF Camelia? | Location advantages | factual | Should list location advantages
+
+# Test 98: Property - Price Range 1BHK
+What are the price ranges for 1BHK apartments in DLF Camelia? | Price range 1BHK | factual | Should return price range for 1BHK units
+
+# Test 99: Property - Price Range Penthouse
+What are the price ranges for penthouse in DLF Camelia? | Price range penthouse | factual | Should return price range for penthouse
+
+# Test 100: Property - Nearby Facilities
+What are the nearby schools and hospitals near DLF Camelia? | Schools and hospitals | factual | Should list nearby schools and hospitals
+
+# ============================================================================
+# DUPLICATE QUERIES (5 duplicates for memory testing)
+# ============================================================================
+
+# Test 101: DUPLICATE 1 - After Query 20 (Original: Test 1)
+What is the chemical formula for water? | H2O | factual | Should use memory from Test 1
+
+# Test 102: DUPLICATE 2 - After Query 40 (Original: Test 31)
+Calculate 144 divided by 12 | 12 | computation | Should use memory from Test 31
+
+# Test 103: DUPLICATE 3 - After Query 60 (Original: Test 63)
+Calculate the average of numbers: 100, 200, 300, 400, 500 | 300 | computation | Should use memory from Test 63
+
+# Test 104: DUPLICATE 4 - After Query 80 (Original: Test 81)
+Find the factorial of 5 and calculate the sum of all prime numbers from 1 to 20, then find the greatest common divisor of 48 and 18 | 120, 77, 6 | computation | Should use memory from Test 81
+
+# Test 105: DUPLICATE 5 - After Query 95 (Original: Test 91)
+List the security features in DLF Camelia. | Security features | factual | Should use memory from Test 91
+
+

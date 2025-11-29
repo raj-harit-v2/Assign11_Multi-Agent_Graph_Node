@@ -47,6 +47,33 @@ class AwaitTransformer(ast.NodeTransformer):
         return node
 
 # ───────────────────────────────────────────────────────────────
+# AST TRANSFORMER: Convert string number literals to ints in tool calls
+# ───────────────────────────────────────────────────────────────
+class IntLiteralTransformer(ast.NodeTransformer):
+    """Convert string literals that are numbers to integers in function calls."""
+    def __init__(self, tool_names):
+        self.tool_names = tool_names
+    
+    def visit_Call(self, node):
+        self.generic_visit(node)
+        # Check if this is a tool call
+        if isinstance(node.func, ast.Name) and node.func.id in self.tool_names:
+            # Convert string number arguments to integers
+            new_args = []
+            for arg in node.args:
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    # Try to convert string to int if it's a number
+                    try:
+                        int_value = int(arg.value)
+                        new_args.append(ast.Constant(value=int_value))
+                    except ValueError:
+                        new_args.append(arg)
+                else:
+                    new_args.append(arg)
+            node.args = new_args
+        return node
+
+# ───────────────────────────────────────────────────────────────
 # UTILITY FUNCTIONS
 # ───────────────────────────────────────────────────────────────
 def count_function_calls(code: str) -> int:
@@ -75,7 +102,13 @@ def build_safe_globals(mcp_funcs: dict, multi_mcp=None) -> dict:
                 multi_mcp.function_wrapper(tool_name, *args)
                 for tool_name, *args in tool_calls
             ]
-            return await asyncio.gather(*coros)
+            try:
+                return await asyncio.gather(*coros, return_exceptions=True)
+            except ExceptionGroup as eg:
+                # Handle ExceptionGroup from gather - extract first error
+                if eg.exceptions:
+                    raise eg.exceptions[0]  # Re-raise first exception
+                raise
 
         safe_globals["parallel"] = parallel
 
@@ -134,7 +167,16 @@ async def run_user_code(code: str, multi_mcp, step_description: str = "", query:
             local_vars = {}
 
             cleaned_code = textwrap.dedent(code.strip())
+            
+            # Validate code is not empty
+            if not cleaned_code or not cleaned_code.strip():
+                raise ValueError("Generated code is empty. Decision module may have failed to generate valid code.")
+            
             tree = ast.parse(cleaned_code)
+            
+            # Validate tree has body
+            if not tree.body:
+                raise ValueError("Parsed code has no statements. Decision module generated invalid code.")
 
             has_return = any(isinstance(node, ast.Return) for node in tree.body)
             has_result = any(
@@ -147,8 +189,15 @@ async def run_user_code(code: str, multi_mcp, step_description: str = "", query:
                 tree.body.append(ast.Return(value=ast.Name(id="result", ctx=ast.Load())))
 
             tree = KeywordStripper().visit(tree) # strip "key" = "value" cases to only "value"
-            tree = AwaitTransformer(set(tool_funcs)).visit(tree)
+            # Convert string number literals to integers in tool calls
+            tool_names = set(tool_funcs.keys())
+            tree = IntLiteralTransformer(tool_names).visit(tree)
+            tree = AwaitTransformer(tool_names).visit(tree)
             ast.fix_missing_locations(tree)
+            
+            # Double-check body is not empty after transformations
+            if not tree.body:
+                raise ValueError("Code body is empty after AST transformations.")
 
             func_def = ast.AsyncFunctionDef(
                 name="__main",
@@ -204,7 +253,20 @@ async def run_user_code(code: str, multi_mcp, step_description: str = "", query:
                 continue
             else:
                 break
-
+        except ExceptionGroup as eg:
+            # Handle ExceptionGroup (Python 3.11+) - extract first meaningful error
+            # Note: Using regular 'except' instead of 'except*' to avoid mixing syntax
+            last_error = f"ExceptionGroup: {len(eg.exceptions)} error(s)"
+            if eg.exceptions:
+                first_exc = eg.exceptions[0]
+                last_error = f"{type(first_exc).__name__}: {str(first_exc)}"
+            retry_count += 1
+            if retry_count < max_retries:
+                print(f"Error occurred: {last_error}. Retrying ({retry_count}/{max_retries})...")
+                await asyncio.sleep(1)  # Brief delay before retry
+                continue
+            else:
+                break
         except Exception as e:
             last_error = f"{type(e).__name__}: {str(e)}"
             retry_count += 1

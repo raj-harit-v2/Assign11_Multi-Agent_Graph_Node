@@ -10,29 +10,58 @@ from typing import Dict, Optional, Tuple
 class PropertyUnitParser:
     """Parser for property units (BHK - Bedroom, Hall, Kitchen)."""
     
-    # BHK patterns: 2BHK, 3BHK, 4BHK, etc.
+    # BHK patterns: 1BHK, 2BHK, 3BHK, 4BHK, 5BHK, 6BHK, 7BHK, etc.
     BHK_PATTERN = re.compile(r'(\d+)\s*BHK', re.IGNORECASE)
     
     # Alternative patterns: 2 BHK, 2-BHK, 2bhk, etc.
     BHK_PATTERN_ALT = re.compile(r'(\d+)\s*[-]?\s*BHK', re.IGNORECASE)
     
+    # Penthouse pattern
+    PENTHOUSE_PATTERN = re.compile(r'\bpenthouse\b', re.IGNORECASE)
+    
+    # Amenities patterns (common property amenities)
+    AMENITIES_PATTERNS = {
+        'clubhouse': re.compile(r'\bclubhouse\b', re.IGNORECASE),
+        'pool': re.compile(r'\b(swimming\s*)?pool\b', re.IGNORECASE),
+        'gym': re.compile(r'\b(gym|gymnasium|fitness\s*center)\b', re.IGNORECASE),
+        'parking': re.compile(r'\b(parking|car\s*park)\b', re.IGNORECASE),
+        'garden': re.compile(r'\b(garden|landscaped\s*garden)\b', re.IGNORECASE),
+        'security': re.compile(r'\b(security|24/7\s*security)\b', re.IGNORECASE),
+        'playground': re.compile(r'\b(playground|kids\s*play\s*area)\b', re.IGNORECASE),
+        'lift': re.compile(r'\b(lift|elevator)\b', re.IGNORECASE),
+        'power_backup': re.compile(r'\b(power\s*backup|generator)\b', re.IGNORECASE),
+        'wifi': re.compile(r'\b(wifi|wi-fi|internet)\b', re.IGNORECASE),
+    }
+    
     @staticmethod
     def parse_bhk(query: str) -> Optional[Dict[str, any]]:
         """
         Parse BHK (Bedroom, Hall, Kitchen) from query.
+        Supports 1BHK, 2BHK, 3BHK, 4BHK, 5BHK, 6BHK, 7BHK, and penthouse.
         
         Args:
             query: Query text to parse
         
         Returns:
             Dict with:
-                - bedrooms: int (number of bedrooms)
-                - bhk_value: str (original BHK string like "2BHK")
-                - full_description: str (e.g., "2 Bedrooms, Hall, Kitchen")
+                - bedrooms: int (number of bedrooms, 0 for penthouse)
+                - bhk_value: str (original BHK string like "2BHK" or "penthouse")
+                - full_description: str (e.g., "2 Bedrooms, Hall, Kitchen" or "Penthouse")
+                - category: int (1-7 for BHK, 8 for penthouse)
                 - found: bool
             Or None if not found
         """
         query_lower = query.lower()
+        
+        # Check for penthouse first
+        if PropertyUnitParser.PENTHOUSE_PATTERN.search(query):
+            return {
+                "bedrooms": 0,  # Penthouse doesn't have standard BHK count
+                "bhk_value": "penthouse",
+                "full_description": "Penthouse",
+                "category": 8,  # Category 8 for penthouse
+                "found": True
+            }
         
         # Try main pattern first
         match = PropertyUnitParser.BHK_PATTERN.search(query)
@@ -44,6 +73,10 @@ class PropertyUnitParser:
             bedrooms = int(match.group(1))
             bhk_value = match.group(0)
             
+            # Validate BHK range (1-7)
+            if bedrooms < 1 or bedrooms > 7:
+                return None
+            
             # Build full description
             if bedrooms == 1:
                 full_desc = "1 Bedroom, Hall, Kitchen"
@@ -54,34 +87,135 @@ class PropertyUnitParser:
                 "bedrooms": bedrooms,
                 "bhk_value": bhk_value,
                 "full_description": full_desc,
+                "category": bedrooms,  # Category 1-7 for BHK
                 "found": True
             }
         
         return None
     
     @staticmethod
-    def extract_property_info(query: str) -> Dict[str, any]:
+    def parse_all_bhk(query: str) -> list[Dict[str, any]]:
         """
-        Extract all property-related information from query.
+        Parse all BHK types mentioned in query (e.g., "1BHK, 2BHK, 3BHK").
         
         Args:
             query: Query text to parse
         
         Returns:
-            Dict with property information including BHK
+            List of BHK info dicts, sorted by category (1-8)
+        """
+        results = []
+        
+        # Check for penthouse
+        if PropertyUnitParser.PENTHOUSE_PATTERN.search(query):
+            results.append({
+                "bedrooms": 0,
+                "bhk_value": "penthouse",
+                "full_description": "Penthouse",
+                "category": 8,
+                "found": True
+            })
+        
+        # Find all BHK patterns
+        matches = PropertyUnitParser.BHK_PATTERN.finditer(query)
+        for match in matches:
+            bedrooms = int(match.group(1))
+            if 1 <= bedrooms <= 7:  # Valid range
+                bhk_value = match.group(0)
+                if bedrooms == 1:
+                    full_desc = "1 Bedroom, Hall, Kitchen"
+                else:
+                    full_desc = f"{bedrooms} Bedrooms, Hall, Kitchen"
+                
+                results.append({
+                    "bedrooms": bedrooms,
+                    "bhk_value": bhk_value,
+                    "full_description": full_desc,
+                    "category": bedrooms,
+                    "found": True
+                })
+        
+        # Remove duplicates and sort by category
+        seen = set()
+        unique_results = []
+        for result in sorted(results, key=lambda x: x["category"]):
+            key = result["category"]
+            if key not in seen:
+                seen.add(key)
+                unique_results.append(result)
+        
+        return unique_results
+    
+    @staticmethod
+    def parse_amenities(query: str) -> list[str]:
+        """
+        Parse amenities from query (clubhouse, pool, gym, etc.).
+        
+        Args:
+            query: Query text to parse
+        
+        Returns:
+            List of found amenities (normalized names)
+        """
+        found_amenities = []
+        
+        for amenity_name, pattern in PropertyUnitParser.AMENITIES_PATTERNS.items():
+            if pattern.search(query):
+                found_amenities.append(amenity_name)
+        
+        return found_amenities
+    
+    @staticmethod
+    def extract_property_info(query: str) -> Dict[str, any]:
+        """
+        Extract all property-related information from query.
+        Includes BHK categorization (1-7, penthouse) and amenities.
+        
+        Args:
+            query: Query text to parse
+        
+        Returns:
+            Dict with property information including:
+                - bhk: Single BHK info (first found)
+                - all_bhk: List of all BHK types found
+                - amenities: List of amenities found
+                - property_type: Primary property type
+                - categories: List of BHK categories (1-7, 8 for penthouse)
         """
         result = {
             "has_property_query": False,
             "bhk": None,
-            "property_type": None
+            "all_bhk": [],
+            "amenities": [],
+            "property_type": None,
+            "categories": []
         }
         
-        # Check for BHK
-        bhk_info = PropertyUnitParser.parse_bhk(query)
-        if bhk_info:
+        # Check for BHK (all types)
+        all_bhk = PropertyUnitParser.parse_all_bhk(query)
+        if all_bhk:
             result["has_property_query"] = True
-            result["bhk"] = bhk_info
-            result["property_type"] = f"{bhk_info['bedrooms']}BHK"
+            result["all_bhk"] = all_bhk
+            result["bhk"] = all_bhk[0]  # First found as primary
+            result["categories"] = [bhk["category"] for bhk in all_bhk]
+            
+            # Set property type
+            if len(all_bhk) == 1:
+                bhk_info = all_bhk[0]
+                if bhk_info["category"] == 8:
+                    result["property_type"] = "penthouse"
+                else:
+                    result["property_type"] = bhk_info["bhk_value"]
+            else:
+                # Multiple types
+                types = [bhk["bhk_value"] for bhk in all_bhk]
+                result["property_type"] = ", ".join(types)
+        
+        # Check for amenities
+        amenities = PropertyUnitParser.parse_amenities(query)
+        if amenities:
+            result["has_property_query"] = True
+            result["amenities"] = amenities
         
         return result
 
@@ -297,14 +431,22 @@ class QueryParser:
         }
         
         if parsed["has_property"]:
-            bhk = parsed["property"]["bhk"]
-            if bhk:
+            prop_info = parsed["property"]
+            
+            # Add all BHK types
+            for bhk in prop_info.get("all_bhk", []):
                 entities["property_units"].append({
-                    "type": "BHK",
+                    "type": "BHK" if bhk["category"] <= 7 else "PENTHOUSE",
                     "bedrooms": bhk["bedrooms"],
                     "value": bhk["bhk_value"],
-                    "description": bhk["full_description"]
+                    "description": bhk["full_description"],
+                    "category": bhk["category"]
                 })
+            
+            # Add amenities
+            amenities = prop_info.get("amenities", [])
+            if amenities:
+                entities["amenities"] = amenities
         
         if parsed["has_currency"]:
             currency = parsed["currency"]["currency"]

@@ -32,7 +32,17 @@ def ask_user_for_tool_result(context: dict) -> str:
     print("\nThe tool failed. Please provide the result/answer manually:")
     print("-" * 60)
     
-    user_input = input("Your answer: ").strip()
+    # Handle non-interactive mode (e.g., during automated tests)
+    try:
+        user_input = input("Your answer: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        # Non-interactive mode - return default error message
+        error_msg = context.get('error_message', 'Unknown error')
+        step_desc = context.get('step_description', 'Unknown step')
+        default_result = f"Tool execution failed: {error_msg}. Step: {step_desc}. No user input available (non-interactive mode)."
+        print(f"\n[WARNING] Non-interactive mode detected. Using default result.")
+        print(f"Default result: {default_result[:100]}...")
+        return default_result
     
     if not user_input:
         print("Warning: Empty input received. Using default: 'Tool failed, no user input provided'")
@@ -87,7 +97,13 @@ def ask_user_for_plan(context: dict, suggested_plan: list, session_id: str = Non
     print("  4. Provide JSON plan (type 'json' then paste JSON with final_answer, etc.)")
     print("-" * 60)
     
-    choice = input("Your choice: ").strip().lower()
+    # Handle non-interactive mode (e.g., during automated tests)
+    try:
+        choice = input("Your choice: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        # Non-interactive mode - accept suggested plan
+        print("\n[WARNING] Non-interactive mode detected. Accepting suggested plan.")
+        return suggested_plan, None
     
     if choice == "json":
         print("\nEnter JSON plan (with final_answer, original_goal_achieved, etc.):")

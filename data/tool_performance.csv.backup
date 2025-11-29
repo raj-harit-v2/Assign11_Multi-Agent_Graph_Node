@@ -1,3 +1,0 @@
-Test_Id,Query_Id,Query_Text,Plan_Used,Result_Status,Start_Datetime,End_Datetime,Elapsed_Time,Plan_Step_Count,Tool_Name,Retry_Count,Error_Message,Final_State
-1,327de1ff-4835-4dd6-8117-bef89e17d816,Test query for diagnostic,"[""Step 1"", ""Step 2""]",success,2025-01-01 10:00:00,2025-01-01 10:00:05,5.000,2,test_tool,0,,"{""goal_achieved"": true}"
-1,6fb192f2-2d5a-475b-87f0-6001e7ebe69d,Test query for diagnostic,"[""Step 1"", ""Step 2""]",success,2025-01-01 10:00:00,2025-01-01 10:00:05,5.000,2,test_tool,0,,"{""goal_achieved"": true}"

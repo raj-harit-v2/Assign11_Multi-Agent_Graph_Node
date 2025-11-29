@@ -40,7 +40,7 @@ def migrate_tool_performance_csv(data_dir: str = "data"):
         rows = list(reader)
     
     # Check if migration needed
-    new_columns = ["Api_Call_Type", "Step_Details", "Nodes_Called", "Nodes_Compact", "Node_Count", "Nodes_Exe_Path"]
+    new_columns = ["Api_Call_Type", "LLM_Provider", "Step_Details", "Nodes_Called", "Nodes_Compact", "Node_Count", "Nodes_Exe_Path"]
     needs_migration = any(col not in headers for col in new_columns)
     
     if not needs_migration:
