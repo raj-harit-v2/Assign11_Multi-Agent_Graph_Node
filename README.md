@@ -6,6 +6,13 @@ Assignment 11 transforms a sequential multi-agent system into a graph-native age
 
 > 📊 **Code Comparison Report**: See [S10Share_vs_Assign11_Comparison.md](S10Share_vs_Assign11_Comparison.md) for detailed metrics showing 63.97% code replacement and architectural evolution analysis.
 
+### Major Enhancements
+- `agent/agent_loop.py`: 226 → 584 lines (+358 lines)
+- `decision/decision.py`: 92 → 707 lines (+615 lines)
+- `action/executor.py`: 162 → 377 lines (+215 lines)
+- `memory/memory_search.py`: 101 → 372 lines (+271 lines)
+- `retrieval/formatter_agent.py`: 0 → 1539 lines (+1539 lines)
+
 ## Key Differences from Assign10_Multi-Agent
 
 ### 1. **Architecture Paradigm**
