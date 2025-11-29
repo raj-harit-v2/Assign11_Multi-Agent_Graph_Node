@@ -76,11 +76,11 @@
 ## Key Files Modified
 
 ### Major Enhancements
-- `agent/agent_loop.py`: 226 → 584 lines (+358 lines)
-- `decision/decision.py`: 92 → 707 lines (+615 lines)
-- `action/executor.py`: 162 → 377 lines (+215 lines)
-- `memory/memory_search.py`: 101 → 372 lines (+271 lines)
-- `retrieval/formatter_agent.py`: 0 → 1539 lines (+1539 lines)
+- `agent/agent_loop.py`: 226 → 584 lines (+358 lines) -----> +158.41%
+- `decision/decision.py`: 92 → 707 lines (+615 lines) -----> +668.48%
+- `action/executor.py`: 162 → 377 lines (+215 lines) -----> +132.72%
+- `memory/memory_search.py`: 101 → 372 lines (+271 lines) -----> +268.32%
+- `retrieval/formatter_agent.py`: 0 → 1539 lines (+1539 lines) -----> N/A (new file)
 
 ## Key Files Deleted
 

@@ -272,11 +272,17 @@ def generate_report():
 ### Major Enhancements
 """
     
-    # Add file size information
+    # Add file size information with percentages
     for file, (s10_size, current_size, diff) in file_sizes.items():
         if diff != 0:
             sign = "+" if diff > 0 else ""
-            report += f"- `{file}`: {s10_size} → {current_size} lines ({sign}{diff} lines)\n"
+            # Calculate percentage growth
+            if s10_size > 0:
+                percentage = round((diff / s10_size) * 100, 2)
+                report += f"- `{file}`: {s10_size} → {current_size} lines ({sign}{diff} lines) -----> {sign}{percentage}%\n"
+            else:
+                # New file (s10_size = 0)
+                report += f"- `{file}`: {s10_size} → {current_size} lines ({sign}{diff} lines) -----> N/A (new file)\n"
     
     report += f"""
 ## Key Files Deleted
