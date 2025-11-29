@@ -4,6 +4,8 @@
 
 Assignment 11 transforms a sequential multi-agent system into a graph-native agent system with DAG-based execution planning. The system represents execution plans as directed acyclic graphs (DAGs), where each node contains multiple code variants (A, B, C) for automatic retry and fallback mechanisms. Enhanced memory search with vector embeddings, session caching, and question word indexing enables intelligent context reuse. DuckDuckGo markdown content extraction provides full web content retrieval, while exponential backoff and Ollama support ensure robust API management. The system tracks node execution paths, variant success rates, and comprehensive execution details in enhanced CSV logging.
 
+> 📊 **Code Comparison Report**: See [S10Share_vs_Assign11_Comparison.md](S10Share_vs_Assign11_Comparison.md) for detailed metrics showing 63.97% code replacement and architectural evolution analysis.
+
 ## Key Differences from Assign10_Multi-Agent
 
 ### 1. **Architecture Paradigm**
@@ -278,5 +280,4 @@ Assign11_Multi-Agent_Graph_Node/
 ---
 
 **Evolution Summary**: Assign10 was a sequential multi-agent system. Assign11 introduces a graph-native architecture with DAG-based execution, multiple code variants, dynamic fallback, enhanced memory/search capabilities, comprehensive testing, and production-ready features.
-
 
