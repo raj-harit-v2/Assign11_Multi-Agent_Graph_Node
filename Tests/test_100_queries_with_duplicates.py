@@ -574,6 +574,16 @@ async def run_test_100_queries():
             if is_duplicate:
                 print(f"[MEMORY USAGE] Duplicate query - Original was Test {original_id}")
             
+            # Derive statuses for CSV:
+            # Result_Status  → high-level pipeline outcome (success / failed / error)
+            # Actual_Status  → per-query correctness (success / mismatch / warning / error)
+            result_status = "success"      # pipeline completed without exception
+            actual_status = "success"      # default correctness classification
+            if is_correct is False:
+                actual_status = "mismatch"
+            elif is_correct is None and validation_notes:
+                actual_status = "warning"
+
             # Log to CSV
             # Extract tool_name from execution_details (first tool used, or "agent_loop" if none)
             tools_used_list = execution_details.get('tools_used', [])
@@ -598,7 +608,8 @@ async def run_test_100_queries():
                 query_text=query,
                 query_answer=answer,
                 correct_answer_expected=expected_answer,
-                result_status="success",
+                result_status=result_status,
+                actual_status=actual_status,
                 elapsed_time=query_elapsed,
                 tool_name=tool_name,
                 retry_count=0,  # Not tracked in execution_details, default to 0
@@ -677,7 +688,8 @@ async def run_test_100_queries():
                     query_text=query,
                     query_answer="ERROR",
                     correct_answer_expected=expected_answer,
-                    result_status="error",
+                    result_status="failed",
+                    actual_status="error",
                     elapsed_time=query_elapsed,
                     tool_name=tool_name,
                     retry_count=0,
@@ -714,6 +726,9 @@ async def run_test_100_queries():
     successful = sum(1 for r in results if r['status'] == 'success')
     errors = sum(1 for r in results if r['status'] == 'error')
     avg_time = sum(r['elapsed'] for r in results) / len(results) if results else 0
+    
+    # Count Human-in-Loop triggers
+    hil_count = sum(1 for r in results if r.get('hil_triggered', False))
     
     # Answer Accuracy (vs Expected Answers)
     correct_answers = 0

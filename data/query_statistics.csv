@@ -88,3 +88,19 @@ Query_Id,Query_Text,Query_Name,Total_Attempts,Successes,Failures,Success_Rate_Pe
 87,"Calculate 15 * 4, then divide the result by 3, and finally add 20",Test 87 - complex,1,1,0,100.00,5.855,5.855
 88,"Find the factorial of 6, then calculate 2 to the power of 5, and finally find the sum of both results",Test 88 - complex,1,1,0,100.00,71.274,71.274
 89,"Calculate the average of 10, 20, 30, then multiply by 2, and finally subtract 5",Test 89 - complex,1,1,0,100.00,56.141,56.141
+90,"Find the square root of 144, then multiply by 3, and finally add 10",Test 90 - complex,1,1,0,100.00,49.972,49.972
+91,"Calculate 25 * 4, then divide by 5, and finally find the square root",Test 91 - complex,1,1,0,100.00,5.735,5.735
+92,"Find the factorial of 4, then calculate 3 to the power of 3, and finally find the difference",Test 92 - complex,1,1,0,100.00,81.424,81.424
+93,"Calculate the sum of 50, 100, 150, then divide by 3, and finally multiply by 2",Test 93 - complex,1,1,0,100.00,323.520,323.520
+94,"Find the square root of 81, then multiply by 2, and finally subtract 3",Test 94 - complex,1,1,0,100.00,58.689,58.689
+95,List the security features in DLF Camelia.,Test 95 - property,1,1,0,100.00,55.805,55.805
+96,What are the price ranges for 3BHK apartments in DLF Camelia?,Test 96 - property,1,1,0,100.00,58.002,58.002
+97,What amenities are available in DLF Camelia?,Test 97 - property,1,1,0,100.00,59.664,59.664
+98,What are the price ranges for 2BHK apartments in DLF Camelia?,Test 98 - property,1,1,0,100.00,64.374,64.374
+99,What are the price ranges for 4BHK apartments in DLF Camelia?,Test 99 - property,1,1,0,100.00,69.011,69.011
+100,List the security features in DLF Camelia.,Test 100 - property (DUPLICATE),1,1,0,100.00,68.138,68.138
+101,List the parking facilities in DLF Camelia.,Test 101 - property,1,1,0,100.00,73.020,73.020
+102,What are the location advantages of DLF Camelia?,Test 102 - property,1,1,0,100.00,70.635,70.635
+103,What are the price ranges for 1BHK apartments in DLF Camelia?,Test 103 - property,1,1,0,100.00,79.842,79.842
+104,What are the price ranges for penthouse in DLF Camelia?,Test 104 - property,1,1,0,100.00,82.913,82.913
+105,What are the nearby schools and hospitals near DLF Camelia?,Test 105 - property,1,1,0,100.00,77.998,77.998

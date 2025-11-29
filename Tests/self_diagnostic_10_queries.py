@@ -339,28 +339,27 @@ async def run_diagnostic_test():
             tool_name = tools_used[0] if tools_used else ""
             retry_count = 0  # Not tracked in execution_details, default to 0
             
-            # Determine result status
+            # Determine high-level pipeline status (Result_Status)
+            # - "success" → pipeline executed without fatal error
+            # - "failed"  → no valid answer returned
             result_status = "success"
             error_message = ""
             
             if not answer or answer.lower() in ["none", "error", "failed"]:
-                result_status = "error"
+                result_status = "failed"
                 error_message = "No valid answer returned"
-            elif len(answer) < 3:
-                result_status = "warning"
-                error_message = "Answer too short"
             
-            # Check if answer matches expected (if available)
-            is_correct = False
+            # Check if answer matches expected (if available) for Actual_Status
+            is_correct = None
             expected_answer = ""
             if query_text in expected_answers:
                 expected_data = expected_answers[query_text]
                 expected_answer = expected_data.get("expected", "")
-                is_correct, _ = verify_answer(answer, expected_answer, expected_data.get("type", expected_type))
-                if not is_correct:
-                    result_status = "warning"  # Mark as warning if doesn't match expected
+                is_correct, _ = verify_answer(
+                    answer, expected_answer, expected_data.get("type", expected_type)
+                )
             
-            # Validate answer based on expected type
+            # Validate answer based on expected type (for warnings/mismatch details)
             validation_notes = []
             if expected_type == "capital_city":
                 if len(answer) < 3 or answer.lower() in ["capital", "france", "paris"]:
@@ -396,6 +395,17 @@ async def run_diagnostic_test():
             if hil_triggered:
                 print(f"[HIL] Human-in-Loop triggered: {hil_reason}")
             
+            # Derive Actual_Status (per-query correctness)
+            # - "success"  → answer matches expected (or no expected and no validation notes)
+            # - "mismatch" → answer does NOT match Correct_Answer_Expected
+            # - "warning"  → no strict expected, but validation_notes present
+            # - "error"    → handled in exception block
+            actual_status = "success"
+            if is_correct is False:
+                actual_status = "mismatch"
+            elif is_correct is None and validation_notes:
+                actual_status = "warning"
+            
             # Store result
             results.append({
                 "test_id": test_id,
@@ -426,6 +436,7 @@ async def run_diagnostic_test():
                 query_answer=answer,
                 correct_answer_expected=expected_answer,
                 result_status=result_status,
+                actual_status=actual_status,
                 elapsed_time=elapsed_time,
                 tool_name=tool_name,
                 retry_count=retry_count,
@@ -476,7 +487,8 @@ async def run_diagnostic_test():
                 query_text=query_text,
                 query_answer="ERROR",
                 correct_answer_expected=expected_answer,
-                result_status="error",
+                result_status="failed",
+                actual_status="error",
                 elapsed_time=elapsed_time,
                 tool_name="",
                 retry_count=0,

@@ -2,22 +2,22 @@
 
 ## Overview
 
-- **Total Tests**: 89
-- **Successes**: 89
+- **Total Tests**: 105
+- **Successes**: 105
 - **Failures**: 0
 - **Success Rate**: 100.00%
-- **Average Time per Test**: 35.650 seconds
+- **Average Time per Test**: 42.396 seconds
 
 ## Tool Performance
 
 | Tool Name | Attempts | Successes | Failures | Success Rate | Avg Time |
 |-----------|----------|-----------|----------|--------------|----------|
 | memory_search | 38 | 38 | 0 | 100.00% | 42.205s |
-| agent_loop | 21 | 21 | 0 | 100.00% | 40.928s |
-| duckduckgo_search_with_markdown | 13 | 13 | 0 | 100.00% | 20.360s |
-| multiply | 10 | 10 | 0 | 100.00% | 10.595s |
+| duckduckgo_search_with_markdown | 24 | 24 | 0 | 100.00% | 42.670s |
+| agent_loop | 24 | 24 | 0 | 100.00% | 53.819s |
+| multiply | 11 | 11 | 0 | 100.00% | 10.153s |
 | divide | 4 | 4 | 0 | 100.00% | 46.028s |
-| power | 2 | 2 | 0 | 100.00% | 53.851s |
+| power | 3 | 3 | 0 | 100.00% | 63.042s |
 | factorial | 1 | 1 | 0 | 100.00% | 47.159s |
 
 ## Query Text Statistics
@@ -113,10 +113,26 @@
 | 87 | Calculate 15 * 4, then divide the result by 3, ... | Test 87 - complex | 1 | 1 | 0 | 100.00% | 5.855s | 5.855s |
 | 88 | Find the factorial of 6, then calculate 2 to th... | Test 88 - complex | 1 | 1 | 0 | 100.00% | 71.274s | 71.274s |
 | 89 | Calculate the average of 10, 20, 30, then multi... | Test 89 - complex | 1 | 1 | 0 | 100.00% | 56.141s | 56.141s |
+| 90 | Find the square root of 144, then multiply by 3... | Test 90 - complex | 1 | 1 | 0 | 100.00% | 49.972s | 49.972s |
+| 91 | Calculate 25 * 4, then divide by 5, and finally... | Test 91 - complex | 1 | 1 | 0 | 100.00% | 5.735s | 5.735s |
+| 92 | Find the factorial of 4, then calculate 3 to th... | Test 92 - complex | 1 | 1 | 0 | 100.00% | 81.424s | 81.424s |
+| 93 | Calculate the sum of 50, 100, 150, then divide ... | Test 93 - complex | 1 | 1 | 0 | 100.00% | 323.520s | 323.520s |
+| 94 | Find the square root of 81, then multiply by 2,... | Test 94 - complex | 1 | 1 | 0 | 100.00% | 58.689s | 58.689s |
+| 95 | List the security features in DLF Camelia. | Test 95 - property | 1 | 1 | 0 | 100.00% | 55.805s | 55.805s |
+| 96 | What are the price ranges for 3BHK apartments i... | Test 96 - property | 1 | 1 | 0 | 100.00% | 58.002s | 58.002s |
+| 97 | What amenities are available in DLF Camelia? | Test 97 - property | 1 | 1 | 0 | 100.00% | 59.664s | 59.664s |
+| 98 | What are the price ranges for 2BHK apartments i... | Test 98 - property | 1 | 1 | 0 | 100.00% | 64.374s | 64.374s |
+| 99 | What are the price ranges for 4BHK apartments i... | Test 99 - property | 1 | 1 | 0 | 100.00% | 69.011s | 69.011s |
+| 100 | List the security features in DLF Camelia. | Test 100 - property (DUPLICATE) | 1 | 1 | 0 | 100.00% | 68.138s | 68.138s |
+| 101 | List the parking facilities in DLF Camelia. | Test 101 - property | 1 | 1 | 0 | 100.00% | 73.020s | 73.020s |
+| 102 | What are the location advantages of DLF Camelia? | Test 102 - property | 1 | 1 | 0 | 100.00% | 70.635s | 70.635s |
+| 103 | What are the price ranges for 1BHK apartments i... | Test 103 - property | 1 | 1 | 0 | 100.00% | 79.842s | 79.842s |
+| 104 | What are the price ranges for penthouse in DLF ... | Test 104 - property | 1 | 1 | 0 | 100.00% | 82.913s | 82.913s |
+| 105 | What are the nearby schools and hospitals near ... | Test 105 - property | 1 | 1 | 0 | 100.00% | 77.998s | 77.998s |
 
 ## Summary
 
-- **Total Time (All Queries)**: 56.141 seconds
+- **Total Time (All Queries)**: 77.998 seconds
 - **Most Used Tool**: memory_search
 - **Worst Tool (by failure rate)**: N/A
-- **Unique Query Texts**: 89
+- **Unique Query Texts**: 105

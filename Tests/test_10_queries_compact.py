@@ -275,6 +275,7 @@ async def run_test_10_queries():
                 query_text=query,
                 query_answer=answer,
                 result_status="success",
+                actual_status="success",
                 elapsed_time=query_elapsed,
                 tool_name=tool_name,
                 api_call_type=execution_details.get('api_call_type', ''),
@@ -312,7 +313,8 @@ async def run_test_10_queries():
                     query_name=f"Test {query_id} - {category}",
                     query_text=query,
                     query_answer="ERROR",
-                    result_status="error",
+                    result_status="failed",
+                    actual_status="error",
                     elapsed_time=query_elapsed,
                     tool_name="",
                     error_message=error_msg

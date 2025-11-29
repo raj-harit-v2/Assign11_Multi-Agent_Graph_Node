@@ -27,11 +27,16 @@ class CSVManager:
         """Initialize CSV files with headers if they don't exist."""
         # Initialize tool_performance.csv
         if not self.tool_performance_file.exists():
+            # NOTE: Result_Status is reserved for high-level pipeline outcome
+            # (success / failed / error), while Actual_Status captures
+            # correctness classification (success / mismatch / warning / error)
             headers = [
-                "Test_Id", "Query_Id", "Query_Name", "Query_Text", "Query_Answer", "Correct_Answer_Expected", "Plan_Used", "Result_Status",
+                "Test_Id", "Query_Id", "Query_Name", "Query_Text", "Query_Answer",
+                "Correct_Answer_Expected", "Plan_Used", "Result_Status", "Actual_Status",
                 "Start_Datetime", "End_Datetime", "Elapsed_Time", "Plan_Step_Count",
                 "Tool_Name", "Retry_Count", "Error_Message", "Final_State",
-                "Api_Call_Type", "LLM_Provider", "Step_Details", "Nodes_Called", "Nodes_Compact", "Node_Count", "Nodes_Exe_Path"
+                "Api_Call_Type", "LLM_Provider", "Step_Details",
+                "Nodes_Called", "Nodes_Compact", "Node_Count", "Nodes_Exe_Path"
             ]
             self._write_csv_headers(self.tool_performance_file, headers)
         
@@ -322,6 +327,7 @@ class CSVManager:
         query_answer: str = "",
         correct_answer_expected: str = "",
         result_status: str = "success",
+        actual_status: str = "",
         elapsed_time: float = 0.0,
         api_call_type: str = "",
         llm_provider: str = "",
@@ -349,7 +355,9 @@ class CSVManager:
             query_text: The actual query text used
             query_answer: The final answer for the query
             correct_answer_expected: The expected correct answer (for validation)
-            result_status: "success" or "failure"
+            result_status: High-level pipeline status, e.g. "success", "failed", "error"
+            actual_status: Per-query correctness classification:
+                "success" | "mismatch" | "warning" | "error"
             elapsed_time: Elapsed time (float or string)
             api_call_type: Type of API call (e.g., "vector_search", "graph_query", "llm_call", "tool_execution")
             llm_provider: LLM provider used (e.g., "Google API", "Ollama", "Mixed")
@@ -413,7 +421,8 @@ class CSVManager:
             execution_path = self._format_execution_path(nodes_called_json)
         
         row = [
-            test_id, query_id, query_name, query_text, query_answer, correct_answer_expected, plan_json, result_status,
+            test_id, query_id, query_name, query_text, query_answer,
+            correct_answer_expected, plan_json, result_status, actual_status,
             start_datetime, end_datetime, elapsed_time_str, plan_step_count,
             tool_name, retry_count, error_message, final_state_json,
             api_call_type, llm_provider, step_details, nodes_called_json, nodes_compact, node_count, execution_path
