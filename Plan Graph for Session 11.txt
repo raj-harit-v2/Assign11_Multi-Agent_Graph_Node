@@ -1,0 +1,124 @@
+# 5b45c04d-a32b-442c-9ac6-2114e3e523d6
+
+"""
+Plan Graph for Session 11 - Graph-Native Agent System
+Defines graph data structures for DAG-based execution planning.
+"""
+
+from dataclasses import dataclass, field
+from enum import Enum, auto
+from typing import Dict, List, Optional, Any
+
+
+class StepStatus(Enum):
+    """Status of a step node in the execution graph."""
+    PENDING = auto()
+    COMPLETED = auto()
+    FAILED = auto()
+    SKIPPED = auto()
+
+
+class Route(Enum):
+    """Routing decision from perception layer."""
+    DECISION = "decision"
+    SUMMARIZE = "summarize"
+
+
+@dataclass
+class CodeVariant:
+    """Represents a code variant for a step node (A, B, C variants)."""
+    name: str  # e.g., "1A", "1B", "1C"
+    source: str  # code string or callable reference
+    retries: int = 0
+    max_retries: int = 1
+
+    def __post_init__(self):
+        """Validate variant name format."""
+        if not self.name:
+            raise ValueError("CodeVariant name cannot be empty")
+
+
+@dataclass
+class StepNode:
+    """Represents a node in the execution plan graph."""
+    index: str  # e.g., "0", "1", "1F1", etc.
+    description: str
+    variants: List[CodeVariant]
+    status: StepStatus = StepStatus.PENDING
+    parents: List[str] = field(default_factory=list)
+    children: List[str] = field(default_factory=list)
+    is_fallback: bool = False
+    globals_delta: Dict[str, Any] = field(default_factory=dict)
+    error: Optional[str] = None
+
+    def __post_init__(self):
+        """Validate step node."""
+        if not self.index:
+            raise ValueError("StepNode index cannot be empty")
+        if not self.variants:
+            raise ValueError("StepNode must have at least one variant")
+
+
+@dataclass
+class PlanGraph:
+    """Directed acyclic graph representing the execution plan."""
+    nodes: Dict[str, StepNode] = field(default_factory=dict)
+    start_node_id: Optional[str] = None
+    next_step_id: Optional[str] = None
+
+    def add_node(self, node: StepNode):
+        """Add a node to the graph."""
+        if node.index in self.nodes:
+            raise ValueError(f"Node with index {node.index} already exists")
+        self.nodes[node.index] = node
+
+    def add_edge(self, parent_id: str, child_id: str):
+        """Add an edge from parent to child node."""
+        if parent_id not in self.nodes:
+            raise ValueError(f"Parent node {parent_id} not found")
+        if child_id not in self.nodes:
+            raise ValueError(f"Child node {child_id} not found")
+        
+        if child_id not in self.nodes[parent_id].children:
+            self.nodes[parent_id].children.append(child_id)
+        if parent_id not in self.nodes[child_id].parents:
+            self.nodes[child_id].parents.append(parent_id)
+
+    def get_node(self, node_id: str) -> Optional[StepNode]:
+        """Get a node by ID."""
+        return self.nodes.get(node_id)
+
+    def get_children(self, node_id: str) -> List[str]:
+        """Get children node IDs for a given node."""
+        node = self.get_node(node_id)
+        return node.children if node else []
+
+    def get_parents(self, node_id: str) -> List[str]:
+        """Get parent node IDs for a given node."""
+        node = self.get_node(node_id)
+        return node.parents if node else []
+
+    def has_node(self, node_id: str) -> bool:
+        """Check if a node exists in the graph."""
+        return node_id in self.nodes
+
+    def get_execution_order(self) -> List[str]:
+        """Get topological sort of nodes for execution order."""
+        # Simple topological sort for DAG
+        visited = set()
+        result = []
+        
+        def visit(node_id: str):
+            if node_id in visited:
+                return
+            visited.add(node_id)
+            node = self.get_node(node_id)
+            if node:
+                for parent_id in node.parents:
+                    visit(parent_id)
+            result.append(node_id)
+        
+        if self.start_node_id:
+            visit(self.start_node_id)
+        
+        return result
